@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 
 function Sidebar() {
 const navItems = [
-{ name: "Home", path: "/" },
+{ name: "Home", path: "/home" },
 { name: "Files", path: "/files" },
 { name: "Analytics", path: "/analytics" },
 { name: "Settings", path: "/settings" },

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { FaEye, FaEyeSlash, FaFingerprint, FaGoogle } from "react-icons/fa";
 import { FaMicrosoft } from "react-icons/fa6";
@@ -10,12 +11,13 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post("http://localhost:5000/app/login", {
+      const response = await axios.post("http://127.0.0.1:5000/app/login", {
         email,
         password,
       });
@@ -23,6 +25,7 @@ function Login() {
       const { token } = response.data;
       localStorage.setItem("token", token);
       alert("Login successful!");
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
       alert("Login failed.");
