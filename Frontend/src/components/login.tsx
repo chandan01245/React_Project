@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { FaEye, FaEyeSlash, FaFingerprint, FaGoogle } from "react-icons/fa";
 import { FaMicrosoft } from "react-icons/fa6";
 import { ImFacebook2 } from "react-icons/im";
@@ -22,8 +22,8 @@ function Login() {
         password,
       });
 
-      const { token } = response.data;
-      localStorage.setItem("token", token);
+      const { user_group } = response.data;
+      localStorage.setItem("user_role", user_group);
       alert("Login successful!");
       navigate("/dashboard");
     } catch (err) {

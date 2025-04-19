@@ -8,7 +8,6 @@ import pandas as pd
 app = Flask(__name__) 
 CORS(app)
 
-# on the terminal type: curl http://127.0.0.1:5000/api/eco_react 
 # returns "API Works" when we use GET. 
 # returns the data that we send when we use POST. 
 @app.route('/app/login', methods = ['GET', 'POST']) 
@@ -18,7 +17,7 @@ def input_form():
     password = data.get("password")
 
     if email == "chandan@example.com" and password == "$2b$12$HashedPasswordHere":
-        data = {'token': 'valid'}
+        data = {'user_group': 'admin'}
     else:
         data = None
 
