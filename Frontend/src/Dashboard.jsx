@@ -1,9 +1,9 @@
-import { Routes, Route } from "react-router-dom";
-import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
-import Home from "./Pages/Home";
-import Files from "./Pages/Files";
+import { Route, Routes } from "react-router-dom";
+import Header from "./Components/Header";
+import Sidebar from "./Components/Sidebar";
 import Analytics from "./Pages/Analytics";
+import Files from "./Pages/Files";
+import Home from "./Pages/Home";
 import Settings from "./Pages/Settings";
 
 function Dashboard() {

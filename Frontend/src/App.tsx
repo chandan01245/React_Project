@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import "./App.css";
+import Login from "./Components/login";
 import { ThemeContext } from "./Context/ThemeContext";
 import Dashboard from "./Dashboard";
-import "./App.css";
-import Login from "./components/login";
 
 function App() {
   const [theme, setTheme] = useState("light");
