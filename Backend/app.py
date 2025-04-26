@@ -22,7 +22,7 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.Text, nullable=False)
     otp_secret = db.Column(db.String(32), nullable=True)
     is_2fa_enabled = db.Column(db.Boolean, default=False)
 
@@ -34,32 +34,43 @@ class User(db.Model):
 
 
 # --- Routes ---
-
-# 1. Login user (with optional 2FA check)
+# returns "API Works" when we use GET. 
+# returns the data that we send when we use POST. 
 @app.route('/app/login', methods=['POST'])
-def login():
-    data = request.json
-    user = User.query.filter_by(email=data['email']).first()
-    if not user or not user.check_password(data['password']):
-        return jsonify({'success': False, 'msg': 'Invalid credentials'}), 401
+def input_form():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
 
-    if user.is_2fa_enabled:
-        return jsonify({'success': True, '2fa_required': True, 'user_id': user.id})
-    
-    return jsonify({'success': True, '2fa_required': False, 'user_id': user.id})
+    user = User.query.filter_by(email=email).first()
+    if user and user.check_password(password):
+        user.is_2fa_enabled = True
+        db.session.commit()
+        # If 2FA is enabled, tell the frontend to go to 2FA
+        return jsonify({
+            'user_group': 'admin',
+            '2fa_required': user.is_2fa_enabled,
+            'user_id': user.id
+        }), 200
+    else:
+        return jsonify({'error': 'Invalid credentials'}), 401
 
-
-# 2. Setup 2FA (generate secret + QR code)
-@app.route('/api/2fa/setup', methods=['GET'])
+@app.route('/app/2fa', methods=['POST'])
 def setup_2fa():
-    user_id = request.args.get('user_id')
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    user = User.query.filter_by(email=email).first()
+    if not user or not user.check_password(password):
+        return jsonify({'error': 'Invalid credentials'}), 401
 
-    secret = pyotp.random_base32()
-    user.otp_secret = secret
-    db.session.commit()
+    # Only generate a new secret if not already set
+    if not user.otp_secret:
+        secret = pyotp.random_base32()
+        user.otp_secret = secret
+        db.session.commit()
+    else:
+        secret = user.otp_secret
 
     uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user.email, issuer_name="MyApp")
     qr = qrcode.make(uri)
@@ -69,38 +80,31 @@ def setup_2fa():
 
     return jsonify({'qr_code': img_b64})
 
-
-# 3. Verify 2FA code (enable 2FA)
-@app.route('/api/2fa/verify', methods=['POST'])
+@app.route('/app/verify-2fa', methods=['POST'])
 def verify_2fa():
-    data = request.json
-    user = User.query.get(data['user_id'])
-    if not user or not user.otp_secret:
-        return jsonify({'success': False, 'msg': 'Invalid request'}), 400
+    data = request.get_json()
+    email = data.get('email')
+    code = data.get('code')
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if not user.otp_secret:
+        return jsonify({'error': '2FA not set up'}), 400
 
     totp = pyotp.TOTP(user.otp_secret)
-    if totp.verify(data['code']):
-        user.is_2fa_enabled = True
-        db.session.commit()
-        return jsonify({'success': True})
+    if totp.verify(code):
+        return jsonify({'status': 'success'}), 200
     else:
-        return jsonify({'success': False, 'msg': 'Invalid 2FA code'}), 401
+        return jsonify({'error': 'Invalid code'}), 401
 
-
-# 4. Login with 2FA code
-@app.route('/api/2fa/login', methods=['POST'])
-def login_with_2fa():
-    data = request.json
-    user = User.query.filter_by(email=data['email']).first()
-    if not user or not user.check_password(data['password']):
-        return jsonify({'success': False, 'msg': 'Invalid credentials'}), 401
-
-    totp = pyotp.TOTP(user.otp_secret)
-    if totp.verify(data['code']):
-        return jsonify({'success': True, 'msg': 'Logged in with 2FA'})
-    else:
-        return jsonify({'success': False, 'msg': 'Invalid 2FA code'}), 401
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# driver function 
+if __name__ == '__main__': 
+    # with app.app_context():
+    #     db.create_all()
+    #     new_user = User(email="chandan@example.com")
+    #     new_user.set_password("Hashed-Password")
+    #     db.session.add(new_user)
+    #     db.session.commit()
+    app.run(debug = True) 
