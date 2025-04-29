@@ -99,8 +99,8 @@ def verify_2fa():
     else:
         return jsonify({'error': 'Invalid code'}), 401
 
-# driver function 
-if __name__ == '__main__': 
+# driver function
+if __name__ == '__main__':
     # with app.app_context():
     #     db.create_all()
     #     new_user = User(email="chandan@example.com")

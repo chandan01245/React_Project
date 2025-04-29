@@ -1,3 +1,16 @@
-import React, { createContext, useContext } from "react";
+import { createContext } from "react";
 
-export const ThemeContext = React.createContext(null);
+export enum Theme {
+    Light = "light",
+    Dark = "dark",
+}
+
+export const ThemeContext = createContext<ThemeContextType>({
+    theme: Theme.Light,
+    setTheme: () => {},
+});
+
+interface ThemeContextType {
+    theme: Theme;
+    setTheme: (theme: Theme) => void;
+}

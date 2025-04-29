@@ -1,11 +1,11 @@
 import React from "react";
 
-function Files() {
-return (
-    <div className="p-4">
+const Files: React.FC = () => {
+    return (
+        <div className="p-4">
         <h1 className="text-2xl font-bold">Files Page</h1>
-    </div>
+        </div>
     );
-}
+};
 
 export default Files;
