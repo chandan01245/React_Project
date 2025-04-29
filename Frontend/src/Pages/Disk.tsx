@@ -1,6 +1,6 @@
 import React from "react";
 
-const Analytics: React.FC = () => {
+const Disk: React.FC = () => {
     return (
         <div className="p-4">
         <h1 className="text-2xl font-bold">Disk Page</h1>
@@ -8,4 +8,4 @@ const Analytics: React.FC = () => {
     );
 };
 
-export default Analytics;
+export default Disk;
