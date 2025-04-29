@@ -10,6 +10,7 @@ import FileSystem from "./Pages/FileSystem";
 import Home from "./Pages/Home";
 import Network from "./Pages/Network";
 import Storage from "./Pages/Storage";
+import NotFound from "./Pages/NotFound";
 
 function App() {
   const [theme, setTheme] = useState<Theme>(Theme.Light);
@@ -30,14 +31,15 @@ function App() {
     <ThemeContext.Provider value={{ theme, setTheme }}>
       <Router>
         <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/2fa" element={<TwoFA />} />
-          <Route index element={<Home />} />
+          <Route path="Home" element={<Home />} />
           <Route path="Disk" element={<Disk />} />
           <Route path="Storage" element={<Storage />} />
           <Route path="Network" element={<Network />} />
-          <Route path="Filesystem" element={<FileSystem />} />
+          <Route path="Filesystem" element={<Filesystem />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </ThemeContext.Provider>

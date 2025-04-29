@@ -7,6 +7,7 @@ import {
   FiHome,
   FiLogOut,
 } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 
 interface NavItem {
@@ -17,15 +18,18 @@ interface NavItem {
 
 const Sidebar: React.FC = () => {
   const navItems: NavItem[] = [
-    { name: "Home", path: "/", icon: <FiHome /> },
+    { name: "Home", path: "/Home", icon: <FiHome /> },
     { name: "Disk", path: "/Disk", icon: <FiHardDrive /> },
     { name: "Storage", path: "/Storage", icon: <FiDatabase /> },
     { name: "Network", path: "/Network", icon: <FiGlobe /> },
     { name: "File System", path: "/Filesystem", icon: <FiFolder /> },
   ];
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     console.log("Logged out");
+    localStorage.clear();
+    navigate("/");
   };
 
   return (
