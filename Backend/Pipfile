@@ -12,6 +12,7 @@ pyotp = "*"
 qrcode = "*"
 flask-cors = "*"
 flask-sqlalchemy = "*"
+pyjwt = "*"
 
 [dev-packages]
 

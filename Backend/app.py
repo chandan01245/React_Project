@@ -1,9 +1,12 @@
 import base64
+import datetime
 import io
+from functools import wraps
 
+import jwt
 import pyotp
 import qrcode
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, make_response, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -11,9 +14,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 # --- Flask App Setup ---
 app = Flask(__name__)
 CORS(app)  # Allow requests from frontend (React)
-
+SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ILIkari7@localhost:5432/kero'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@localhost:5432/Dummy_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -36,10 +39,16 @@ class User(db.Model):
 	def check_password(self, password):
 		return check_password_hash(self.password_hash, password)
 
+def generate_token(user):
+	payload = {
+		'user_id': user.id,
+		'exp': datetime.datetime.now() + datetime.timedelta(hours=12)
+	}
+	return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 # --- Routes ---
-# returns "API Works" when we use GET. 
-# returns the data that we send when we use POST. 
+# returns "API Works" when we use GET.
+# returns the data that we send when we use POST.
 @app.route('/app/login', methods=['POST'])
 def input_form():
 	data = request.get_json()
@@ -48,10 +57,12 @@ def input_form():
 
 	user = User.query.filter_by(email=email).first()
 	if user and user.check_password(password):
+		token = generate_token(user)
 		user.is_2fa_enabled = True
 		db.session.commit()
 		# If 2FA is enabled, tell the frontend to go to 2FA
 		return jsonify({
+			'token': token,
 			'user_group': user.user_group,
 			'2fa_required': user.is_2fa_enabled,
 			'user_id': user.id
@@ -60,7 +71,7 @@ def input_form():
 		return jsonify({'error': 'Invalid credentials'}), 401
 
 @app.route('/app/2fa', methods=['POST'])
-def setup_2fa():
+def setup_2fa(current_user=None):
 	data = request.get_json()
 	email = data.get('email')
 	password = data.get('password')
@@ -83,6 +94,7 @@ def setup_2fa():
 	img_b64 = base64.b64encode(buf.getvalue()).decode()
 
 	return jsonify({'qr_code': img_b64})
+
 
 @app.route('/app/verify-2fa', methods=['POST'])
 def verify_2fa():
@@ -113,19 +125,19 @@ users = {
 		"group": "viewer"
 	},
 	"chandan@example.com": {
-		"pwd": "Hashed2-Password",
+		"pwd": "Hashed-Password",
 		"group": "admin"
 	}
 }
 
-# driver function 
-if __name__ == '__main__': 
-#	with app.app_context():
-#		db.create_all()
-#		for email in users:
-#			user = User(email=email)
-#			user.set_password(users[email]["pwd"])
-#			user.set_user_group(users[email]["group"])
-#			db.session.add(user)
-#		db.session.commit()
-	app.run(debug = True) 
+# driver function
+if __name__ == '__main__':
+	# with app.app_context():
+	# 	db.create_all()
+	# 	for email in users:
+	# 		user = User(email=email)
+	# 		user.set_password(users[email]["pwd"])
+	# 		user.set_user_group(users[email]["group"])
+	# 		db.session.add(user)
+	# 	db.session.commit()
+	app.run(debug = True)

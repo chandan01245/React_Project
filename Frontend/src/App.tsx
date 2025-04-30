@@ -3,10 +3,11 @@ import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
 import TwoFA from "./Components/2FA";
 import Login from "./Components/login";
+import ProtectedRoute from "./Components/ProtectedRoute";
 import { ThemeContext, Theme } from "./Context/ThemeContext";
 import Dashboard from "./Pages/Dashboard";
 import Disk from "./Pages/Disk";
-import FileSystem from "./Pages/FileSystem";
+import Filesystem from "./Pages/FileSystem";
 import Home from "./Pages/Home";
 import Network from "./Pages/Network";
 import Storage from "./Pages/Storage";
@@ -32,13 +33,62 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/2fa" element={<TwoFA />} />
-          <Route path="Home" element={<Home />} />
-          <Route path="Disk" element={<Disk />} />
-          <Route path="Storage" element={<Storage />} />
-          <Route path="Network" element={<Network />} />
-          <Route path="Filesystem" element={<Filesystem />} />
+          <Route
+            path="/2fa"
+            element={
+              <ProtectedRoute>
+                <TwoFA />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/Home"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/Disk"
+            element={
+              <ProtectedRoute>
+                <Disk />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/Storage"
+            element={
+              <ProtectedRoute>
+                <Storage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/Network"
+            element={
+              <ProtectedRoute>
+                <Network />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/Filesystem"
+            element={
+              <ProtectedRoute>
+                <Filesystem />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

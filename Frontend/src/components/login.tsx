@@ -45,6 +45,7 @@ function Login() {
       });
       const user_group = response.data.user_group;
       const twofa_required = response.data["2fa_required"];
+      localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_role", user_group);
       if (twofa_required) {
         navigate("/2fa", { state: { email, password } });
