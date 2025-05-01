@@ -6,7 +6,6 @@ import { MdAlternateEmail } from "react-icons/md";
 import logo from "./../assets/logo.png";
 import wallpaper from "./../assets/Wallpaper.png";
 
-
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,7 +45,7 @@ function Login() {
       const user_group = response.data.user_group;
       const twofa_required = response.data["2fa_required"];
       localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user_role", user_group);
+      localStorage.setItem("user_group", user_group);
       if (twofa_required) {
         navigate("/2fa", { state: { email, password } });
       } else {
@@ -79,7 +78,12 @@ function Login() {
       >
         <div className="flex items-center gap-4 mb-8 w-full justify-center">
           <img src={logo} alt="logo" className="w-20" />
-          <span className="text-2xl font-bold text-[#2b3a4a] tracking-wide" style={{letterSpacing: '1px'}}>Acceleron <span className="text-[#6fa3c7] font-semibold">HCI</span></span>
+          <span
+            className="text-2xl font-bold text-[#2b3a4a] tracking-wide"
+            style={{ letterSpacing: "1px" }}
+          >
+            Acceleron <span className="text-[#6fa3c7] font-semibold">HCI</span>
+          </span>
         </div>
         {error && (
           <div className="w-full p-2 mb-2 bg-red-100 text-red-600 text-sm rounded text-center">
@@ -92,7 +96,9 @@ function Login() {
             <input
               type="email"
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
               placeholder="Email account"
               className="bg-transparent border-0 w-full outline-none text-sm md:text-base px-2"
               disabled={isLoading}
@@ -104,7 +110,9 @@ function Login() {
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
               className="bg-transparent border-0 w-full outline-none text-sm md:text-base px-2"
               disabled={isLoading}
             />
