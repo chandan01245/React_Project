@@ -1,11 +1,13 @@
-import React from "react";
+import Sidebar from "../Components/Sidebar";
+import "../App.css";
 
-const Files: React.FC = () => {
+function Files() {
     return (
-        <div className="p-4">
-        <h1 className="text-2xl font-bold">Files Page</h1>
+        <div className="flex h-screen w-screen bg-white text-black transition-colors duration-300 overflow-hidden">
+        <Sidebar />
         </div>
     );
-};
+}
+
 
 export default Files;

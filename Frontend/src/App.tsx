@@ -4,14 +4,15 @@ import "./App.css";
 import TwoFA from "./Components/2FA";
 import Login from "./Components/login";
 import ProtectedRoute from "./Components/ProtectedRoute";
-import { ThemeContext, Theme } from "./Context/ThemeContext";
+import { Theme, ThemeContext } from "./Context/ThemeContext";
 import Dashboard from "./Pages/Dashboard";
 import Disk from "./Pages/Disk";
 import Filesystem from "./Pages/FileSystem";
 import Home from "./Pages/Home";
 import Network from "./Pages/Network";
-import Storage from "./Pages/Storage";
 import NotFound from "./Pages/NotFound";
+import Settings from "./Pages/Settings";
+import Storage from "./Pages/Storage";
 
 function App() {
   const [theme, setTheme] = useState<Theme>(Theme.Light);
@@ -86,6 +87,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Filesystem />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/Settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

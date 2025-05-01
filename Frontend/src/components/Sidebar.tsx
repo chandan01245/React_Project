@@ -6,9 +6,9 @@ import {
   FiHardDrive,
   FiHome,
   FiLogOut,
+  FiSettings,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 interface NavItem {
   name: string;
@@ -23,6 +23,7 @@ const Sidebar: React.FC = () => {
     { name: "Storage", path: "/Storage", icon: <FiDatabase /> },
     { name: "Network", path: "/Network", icon: <FiGlobe /> },
     { name: "File System", path: "/Filesystem", icon: <FiFolder /> },
+    { name: "Settings", path: "/Settings", icon: <FiSettings /> },
   ];
   const navigate = useNavigate();
 
@@ -37,7 +38,7 @@ const Sidebar: React.FC = () => {
       {/* Logo */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800 mb-10 tracking-tight">
-          AcceleronLabs
+          <a href="/dashboard">AcceleronLabs</a>
         </h2>
 
         {/* Navigation */}
