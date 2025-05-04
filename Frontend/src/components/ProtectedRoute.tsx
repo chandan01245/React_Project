@@ -23,6 +23,26 @@ const fetchUserGroup = async (): Promise<string | null> => {
   }
 };
 
+const fetch2FAStatus = async (): Promise<{ is2FARequired: boolean; is2FACompleted: boolean } | null> => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const response = await axios.get("http://127.0.0.1:5000/app/2fa-status", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return {
+      is2FARequired: response.data.is_2fa_enabled,
+      is2FACompleted: response.data['2fa_completed']
+    };
+  } catch (err) {
+    console.error("Failed to fetch 2FA status:", err);
+    return null;
+  }
+};
+
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const navigate = useNavigate();
@@ -39,7 +59,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       // Set token in axios globally
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      //Set User Group
+      // Set User Group
       const group = await fetchUserGroup();
       if (!group) {
         setIsAuthorized(false);
@@ -47,13 +67,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
       localStorage.setItem("user_group", group);
 
-      // Check 2FA logic
-      const is2FARequired = localStorage.getItem("2fa_required") === "true";
-      const is2FACompleted = localStorage.getItem("2fa_completed") === "true";
+      // Check 2FA status
+      const twoFAStatus = await fetch2FAStatus();
+      if (!twoFAStatus) {
+        setIsAuthorized(false);
+        return;
+      }
 
       if (
-        is2FARequired &&
-        !is2FACompleted &&
+        twoFAStatus.is2FARequired &&
+        !twoFAStatus.is2FACompleted &&
         window.location.pathname !== "/2fa"
       ) {
         navigate("/2fa");

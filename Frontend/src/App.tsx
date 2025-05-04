@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
 import TwoFA from "./Components/2FA";
 import Login from "./Components/login";
 import ProtectedRoute from "./Components/ProtectedRoute";
-import { Theme, ThemeContext } from "./Context/ThemeContext";
 import Dashboard from "./Pages/Dashboard";
 import Disk from "./Pages/Disk";
 import Filesystem from "./Pages/FileSystem";
@@ -14,23 +12,9 @@ import NotFound from "./Pages/NotFound";
 import Settings from "./Pages/Settings";
 import Storage from "./Pages/Storage";
 
+
 function App() {
-  const [theme, setTheme] = useState<Theme>(Theme.Light);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === Theme.Light || savedTheme === Theme.Dark) {
-      setTheme(savedTheme as Theme);
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.className = theme;
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
       <Router>
         <Routes>
           <Route path="/" element={<Login />} />
@@ -51,7 +35,7 @@ function App() {
             }
           />
           <Route
-            path="/Home"
+            path="/home"
             element={
               <ProtectedRoute>
                 <Home />
@@ -59,7 +43,7 @@ function App() {
             }
           />
           <Route
-            path="/Disk"
+            path="/disk"
             element={
               <ProtectedRoute>
                 <Disk />
@@ -67,7 +51,7 @@ function App() {
             }
           />
           <Route
-            path="/Storage"
+            path="/storage"
             element={
               <ProtectedRoute>
                 <Storage />
@@ -75,7 +59,7 @@ function App() {
             }
           />
           <Route
-            path="/Network"
+            path="/network"
             element={
               <ProtectedRoute>
                 <Network />
@@ -83,7 +67,7 @@ function App() {
             }
           />
           <Route
-            path="/Filesystem"
+            path="/filesystem"
             element={
               <ProtectedRoute>
                 <Filesystem />
@@ -91,7 +75,7 @@ function App() {
             }
           />
           <Route
-            path="/Settings"
+            path="/settings"
             element={
               <ProtectedRoute>
                 <Settings />
@@ -101,7 +85,6 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
-    </ThemeContext.Provider>
   );
 }
 

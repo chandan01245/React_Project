@@ -1,76 +1,22 @@
-import React from "react";
-import { Bar, Line } from "react-chartjs-2";
-import axios from "axios";
-import { useState, useEffect } from "react";
-import AuthorizedRoute from "../components/AuthorizedRoute";
+import Sidebar from "../Components/Sidebar";
 
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-const barData = {
-  labels: ["Jan", "Feb", "Mar", "Apr", "May"],
-  datasets: [
-    {
-      label: "Sales",
-      data: [12, 19, 3, 5, 2],
-      backgroundColor: "rgba(75, 192, 192, 0.6)",
-    },
-  ],
-};
-
-const lineData = {
-  labels: ["Jan", "Feb", "Mar", "Apr", "May"],
-  datasets: [
-    {
-      label: "Revenue",
-      data: [300, 500, 400, 700, 600],
-      borderColor: "rgba(153, 102, 255, 1)",
-      fill: false,
-    },
-  ],
-};
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-};
-
-const Home: React.FC = () => {
+function Home() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Home Page</h1>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold mb-2"></h2>
-      </div>
-      {localStorage.getItem("user_group") === "admin" && (
-        <div className="flex flex-wrap gap-6">
-          <div className="flex h-screen w-screen bg-white text-black transition-colors duration-300 overflow-hidden">
-            <Sidebar />
+    <div className="flex h-screen w-screen bg-white text-black transition-colors duration-300 overflow-hidden">
+      <Sidebar />
+      <div className="flex flex-col w-full h-screen overflow-hidden">
+        <div className="flex flex-col flex-1 p-4 overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            {localStorage.getItem("user_group") === "admin" ? (
+              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            ) : (
+              <h1 className="text-2xl font-bold">User Dashboard</h1>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
-};
+}
 
 export default Home;

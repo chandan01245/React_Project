@@ -1,8 +1,8 @@
 import axios, { AxiosError } from "axios";
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { FaEye, FaEyeSlash, FaFingerprint } from "react-icons/fa";
 import { MdAlternateEmail } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 import logo from "./../assets/logo.png";
 import wallpaper from "./../assets/Wallpaper.png";
 
@@ -44,10 +44,12 @@ function Login() {
       });
       const user_group = response.data.user_group;
       const twofa_required = response.data["2fa_required"];
+      console.log(twofa_required);
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_group", user_group);
+
       if (twofa_required) {
-        navigate("/2fa", { state: { email, password } });
+        navigate("/2fa", { state: { email } });
       } else {
         navigate("/dashboard");
       }

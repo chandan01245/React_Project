@@ -18,12 +18,12 @@ interface NavItem {
 
 const Sidebar: React.FC = () => {
   const navItems: NavItem[] = [
-    { name: "Home", path: "/Home", icon: <FiHome /> },
-    { name: "Disk", path: "/Disk", icon: <FiHardDrive /> },
-    { name: "Storage", path: "/Storage", icon: <FiDatabase /> },
-    { name: "Network", path: "/Network", icon: <FiGlobe /> },
-    { name: "File System", path: "/Filesystem", icon: <FiFolder /> },
-    { name: "Settings", path: "/Settings", icon: <FiSettings /> },
+    { name: "Home", path: "/home", icon: <FiHome /> },
+    { name: "Disk", path: "/disk", icon: <FiHardDrive /> },
+    { name: "Storage", path: "/storage", icon: <FiDatabase /> },
+    { name: "Network", path: "/network", icon: <FiGlobe /> },
+    { name: "File System", path: "/filesystem", icon: <FiFolder /> },
+    { name: "Settings", path: "/settings", icon: <FiSettings /> },
   ];
   const navigate = useNavigate();
 
