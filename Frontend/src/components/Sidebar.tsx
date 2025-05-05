@@ -1,10 +1,10 @@
 import React from "react";
+import { AiOutlineNodeIndex } from "react-icons/ai";
 import {
   FiDatabase,
   FiFolder,
   FiGlobe,
   FiHardDrive,
-  FiHome,
   FiLogOut,
   FiSettings,
 } from "react-icons/fi";
@@ -18,7 +18,7 @@ interface NavItem {
 
 const Sidebar: React.FC = () => {
   const navItems: NavItem[] = [
-    { name: "Home", path: "/home", icon: <FiHome /> },
+    { name: "Node", path: "/node", icon: <AiOutlineNodeIndex /> },
     { name: "Disk", path: "/disk", icon: <FiHardDrive /> },
     { name: "Storage", path: "/storage", icon: <FiDatabase /> },
     { name: "Network", path: "/network", icon: <FiGlobe /> },

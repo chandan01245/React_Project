@@ -6,7 +6,7 @@ import ProtectedRoute from "./Components/ProtectedRoute";
 import Dashboard from "./Pages/Dashboard";
 import Disk from "./Pages/Disk";
 import Filesystem from "./Pages/FileSystem";
-import Home from "./Pages/Home";
+import Node from "./Pages/Node";
 import Network from "./Pages/Network";
 import NotFound from "./Pages/NotFound";
 import Settings from "./Pages/Settings";
@@ -35,10 +35,10 @@ function App() {
             }
           />
           <Route
-            path="/home"
+            path="/node"
             element={
               <ProtectedRoute>
-                <Home />
+                <Node />
               </ProtectedRoute>
             }
           />
