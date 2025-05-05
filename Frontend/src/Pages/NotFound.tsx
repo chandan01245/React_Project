@@ -1,14 +1,58 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
 export default function NotFound() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // Redirect to login if the user is not authenticated
+      navigate("/");
+    }
+  }, [navigate]);
+
+  const handleGoBackHome = async () => {
+    const token = localStorage.getItem("token");
+    const email = localStorage.getItem("email"); // Assuming email is stored in localStorage
+
+    if (!token) {
+      // Redirect to login if the user is not authenticated
+      navigate("/");
+      return;
+    }
+
+    try {
+      // Check if 2FA is activated
+      const response = await fetch("http://127.0.0.1:5000/app/2fa-status", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.is_2fa_enabled) {
+          // If 2FA is activated, redirect to login
+          navigate("/");
+        } else {
+          // If 2FA is not activated, redirect to the dashboard
+          navigate("/dashboard");
+        }
+      } else {
+        console.error("Failed to fetch 2FA status:", response.statusText);
+        navigate("/"); // Redirect to login in case of an error
+      }
+    } catch (error) {
+      console.error("Error checking 2FA status:", error);
+      navigate("/"); // Redirect to login in case of an error
+    }
+  };
+
   return (
     <>
-      {/*
-        This example requires updating your template:
-
-        ```
-        <html class="h-full">
-        <body class="h-full">
-        ```
-      */}
       <main className="grid min-h-full place-items-center bg-white px-6 py-24 sm:py-32 lg:px-8">
         <div className="text-center">
           <p className="text-base font-semibold text-indigo-600">404</p>
@@ -19,12 +63,12 @@ export default function NotFound() {
             Sorry, we couldn’t find the page you’re looking for.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <a
-              href="/dashboard"
+            <button
+              onClick={handleGoBackHome}
               className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
               Go back home
-            </a>
+            </button>
             <a href="#" className="text-sm font-semibold text-gray-900">
               Contact support <span aria-hidden="true">&rarr;</span>
             </a>
