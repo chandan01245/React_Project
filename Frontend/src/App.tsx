@@ -1,8 +1,8 @@
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
-import TwoFA from "./Components/2FA";
-import Login from "./Components/login";
-import ProtectedRoute from "./Components/ProtectedRoute";
+import TwoFA from "./components/2FA";
+import Login from "./components/login";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./Pages/Dashboard";
 import Disk from "./Pages/Disk";
 import Filesystem from "./Pages/FileSystem";

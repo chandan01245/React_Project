@@ -14,7 +14,7 @@ import { Typography } from "@mui/material";
 import axios, { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import "../App.css";
-import Sidebar from "../Components/Sidebar";
+import Sidebar from "../components/Sidebar";
 
 function Settings() {
   const [is2FAOpen, setIs2FAOpen] = useState(false);

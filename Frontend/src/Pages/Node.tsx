@@ -1,5 +1,5 @@
 import { Box, Grid, Typography } from "@mui/material";
-import Sidebar from "../Components/Sidebar";
+import Sidebar from "../components/Sidebar";
 import HealthIndicator from "./HealthIndicator";
 
 function Node() {
