@@ -1,4 +1,5 @@
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import HealthIndicator from "./HealthIndicator";
 
@@ -9,35 +10,67 @@ function Node() {
   if (!node) {
     return (
       <Box sx={{ padding: 4 }}>
-        <Typography variant="h6">No node data provided.</Typography>
+        <Typography variant="h6" color="error">
+          No node data provided.
+        </Typography>
       </Box>
     );
   }
 
+  const {
+    title = "Unknown",
+    ip = "N/A",
+    status = "0/0",
+    haCluster = false,
+    mgs = "N/A",
+    mds = "N/A",
+    oss = "N/A",
+    targets = "N/A",
+  } = node;
+
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Sidebar />
-      <Box sx={{ flex: 1, padding: 4, backgroundColor: "#f9f9f9" }}>
+      <Box sx={{ flex: 1, padding: 4, backgroundColor: "#f9f9f9", overflowY: "auto" }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
-          {node.title} Node Details
+          {title} Node Details
         </Typography>
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography>IP Address: {node.ip}</Typography>
-            <Typography>Status: {node.status}</Typography>
-            <Typography>HA Cluster: {node.haCluster ? "Yes" : "No"}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography>MGS: {node.mgs}</Typography>
-            <Typography>MDS: {node.mds}</Typography>
-            <Typography>OSS: {node.oss}</Typography>
-            <Typography>Targets: {node.targets}</Typography>
-          </Grid>
-        </Grid>
+        {/* Two-column layout using flexbox */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 4,
+            mb: 4,
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Typography><strong>IP Address:</strong> {ip}</Typography>
+            <Typography><strong>Status:</strong> {status}</Typography>
+            <Typography><strong>HA Cluster:</strong> {haCluster ? "Yes" : "No"}</Typography>
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography><strong>MGS:</strong> {mgs}</Typography>
+            <Typography><strong>MDS:</strong> {mds}</Typography>
+            <Typography><strong>OSS:</strong> {oss}</Typography>
+            <Typography><strong>Targets:</strong> {targets}</Typography>
+          </Box>
+        </Box>
 
+        {/* Health Indicator */}
         <Box mt={4}>
-          <HealthIndicator {...node} />
+          <HealthIndicator
+            title={title}
+            status={status}
+            isHealthy={status.split("/")[0] === status.split("/")[1]}
+            ip={ip}
+            mgs={mgs}
+            mds={mds}
+            oss={oss}
+            targets={targets}
+            haCluster={haCluster}
+          />
         </Box>
       </Box>
     </Box>

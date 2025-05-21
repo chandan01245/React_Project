@@ -2,17 +2,18 @@ import { Box, Button, Chip, LinearProgress, Typography } from "@mui/material";
 import React from "react";
 
 interface HealthIndicatorProps {
-  title: string; 
-  status: string; 
-  isHealthy: boolean; 
+  title: string;
+  status: string;
+  isHealthy: boolean;
   ip: string;
   mgs: string;
   mds: string;
   oss: string;
   targets: string;
   haCluster: boolean;
-  showAddButton?: boolean; 
-  onClick?: () => void; 
+  showAddButton?: boolean;
+  onClick?: () => void;
+}
 
 const HealthIndicator: React.FC<HealthIndicatorProps> = ({
   title,
@@ -27,8 +28,25 @@ const HealthIndicator: React.FC<HealthIndicatorProps> = ({
   showAddButton = false,
   onClick,
 }) => {
-  const [current, total] = status.split("/").map(Number);
-  const progress = (current / total) * 100;
+  // Safely parse status
+  let current = 0;
+  let total = 1; // Default to avoid division by zero
+  try {
+    [current, total] = status.split("/").map(Number);
+  } catch (error) {
+    console.error("Invalid status format. Expected 'current/total'.", error);
+  }
+  const progress = Math.min((current / total) * 100, 100); // Ensure progress doesn't exceed 100%
+
+  // Node info mapping for cleaner code
+  const nodeInfo = [
+    { label: "IP", value: ip },
+    { label: "MGS", value: mgs },
+    { label: "MDS", value: mds },
+    { label: "OSS", value: oss },
+    { label: "Targets", value: targets },
+    { label: "HA Cluster", value: haCluster ? "Yes" : "No" },
+  ];
 
   return (
     <Box
@@ -48,6 +66,8 @@ const HealthIndicator: React.FC<HealthIndicatorProps> = ({
             }
           : {},
       }}
+      role={onClick ? "button" : undefined}
+      aria-label={onClick ? `Health Indicator for ${title}` : undefined}
     >
       {/* Header */}
       <Box
@@ -71,24 +91,11 @@ const HealthIndicator: React.FC<HealthIndicatorProps> = ({
 
       {/* Node Info */}
       <Box sx={{ marginBottom: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          <strong>IP:</strong> {ip}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>MGS:</strong> {mgs}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>MDS:</strong> {mds}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>OSS:</strong> {oss}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>Targets:</strong> {targets}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>HA Cluster:</strong> {haCluster ? "Yes" : "No"}
-        </Typography>
+        {nodeInfo.map((info) => (
+          <Typography key={info.label} variant="body2" color="text.secondary">
+            <strong>{info.label}:</strong> {info.value}
+          </Typography>
+        ))}
       </Box>
 
       {/* Progress */}

@@ -12,6 +12,7 @@ import Network from "./Pages/Network";
 import NotFound from "./Pages/NotFound";
 import Settings from "./Pages/Settings";
 import Storage from "./Pages/Storage";
+import MainLayout from "./components/mainlayout";
 
 
 function App() {

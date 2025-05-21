@@ -2,7 +2,8 @@ import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import "../App.css";
 import { useNavigate } from "react-router-dom";
-import { Grid, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
+
 import HealthIndicator from "./HealthIndicator";
 
 function Dashboard() {
@@ -70,21 +71,18 @@ function Dashboard() {
             Cluster Overview
           </Typography>
 
-          <Grid container spacing={4}>
+          {/* Responsive grid using Tailwind CSS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {nodes.map((node, index) => (
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={4}
+              <div
                 key={index}
+                className="cursor-pointer"
                 onClick={() => navigate("/node", { state: node })}
-                style={{ cursor: "pointer" }}
               >
                 <HealthIndicator {...node} />
-              </Grid>
+              </div>
             ))}
-          </Grid>
+          </div>
         </div>
       </div>
     </div>
