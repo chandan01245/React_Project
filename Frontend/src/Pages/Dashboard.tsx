@@ -1,5 +1,5 @@
-import Header from "../components/ui/Header";
-import Sidebar from "../components/ui/Sidebar";
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
 import "../App.css";
 import { useNavigate } from "react-router-dom";
 import { Grid, Typography } from "@mui/material";

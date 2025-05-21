@@ -1,19 +1,18 @@
 // src/App.tsx
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
-import TwoFA from "./Components/2FA";
-import Login from "./Components/login";
+import TwoFA from "./components/2FA";
+import Login from "./components/login";
 import ProtectedRoute from "./components/ProtectedRoute";
-import MainLayout from "./components/MainLayout";
+import Dashboard from "./Pages/Dashboard";
+import Disk from "./Pages/Disk";
+import Filesystem from "./Pages/FileSystem";
+import Node from "./Pages/Node";
+import Network from "./Pages/Network";
+import NotFound from "./Pages/NotFound";
+import Settings from "./Pages/Settings";
+import Storage from "./Pages/Storage";
 
-import Dashboard from "./pages/Dashboard";
-import Disk from "./pages/Disk";
-import Filesystem from "./pages/FileSystem";
-import Node from "./pages/Node";
-import Network from "./pages/Network";
-import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import Storage from "./pages/Storage";
 
 function App() {
   return (

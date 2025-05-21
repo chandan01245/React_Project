@@ -1,5 +1,5 @@
 import "../App.css";
-import Sidebar from "../Components/Sidebar";
+import Sidebar from "../components/Sidebar";
 
 function Network() {
     return (
