@@ -1,7 +1,7 @@
 import React from "react";
-import Header from "./ui/Header";
-import Sidebar from "./ui/Sidebar";
-import Breadcrumbs from "./Breadcrumbs";
+import Header from "./Header";
+import Sidebar from "./Sidebar";
+import Breadcrumbs from "./breadcrumbs";
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (

@@ -1,6 +1,5 @@
 import { Box, Typography } from "@mui/material";
 import { useLocation } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
 import HealthIndicator from "./HealthIndicator";
 
 function Node() {
@@ -29,49 +28,46 @@ function Node() {
   } = node;
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Sidebar />
-      <Box sx={{ flex: 1, padding: 4, backgroundColor: "#f9f9f9", overflowY: "auto" }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          {title} Node Details
-        </Typography>
+    <Box sx={{ padding: 4, backgroundColor: "#f9f9f9", overflowY: "auto" }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        {title} Node Details
+      </Typography>
 
-        {/* Two-column layout using flexbox */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            gap: 4,
-            mb: 4,
-          }}
-        >
-          <Box sx={{ flex: 1 }}>
-            <Typography><strong>IP Address:</strong> {ip}</Typography>
-            <Typography><strong>Status:</strong> {status}</Typography>
-            <Typography><strong>HA Cluster:</strong> {haCluster ? "Yes" : "No"}</Typography>
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography><strong>MGS:</strong> {mgs}</Typography>
-            <Typography><strong>MDS:</strong> {mds}</Typography>
-            <Typography><strong>OSS:</strong> {oss}</Typography>
-            <Typography><strong>Targets:</strong> {targets}</Typography>
-          </Box>
+      {/* Two-column layout using flexbox */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 4,
+          mb: 4,
+        }}
+      >
+        <Box sx={{ flex: 1 }}>
+          <Typography><strong>IP Address:</strong> {ip}</Typography>
+          <Typography><strong>Status:</strong> {status}</Typography>
+          <Typography><strong>HA Cluster:</strong> {haCluster ? "Yes" : "No"}</Typography>
         </Box>
+        <Box sx={{ flex: 1 }}>
+          <Typography><strong>MGS:</strong> {mgs}</Typography>
+          <Typography><strong>MDS:</strong> {mds}</Typography>
+          <Typography><strong>OSS:</strong> {oss}</Typography>
+          <Typography><strong>Targets:</strong> {targets}</Typography>
+        </Box>
+      </Box>
 
-        {/* Health Indicator */}
-        <Box mt={4}>
-          <HealthIndicator
-            title={title}
-            status={status}
-            isHealthy={status.split("/")[0] === status.split("/")[1]}
-            ip={ip}
-            mgs={mgs}
-            mds={mds}
-            oss={oss}
-            targets={targets}
-            haCluster={haCluster}
-          />
-        </Box>
+      {/* Health Indicator */}
+      <Box mt={4}>
+        <HealthIndicator
+          title={title}
+          status={status}
+          isHealthy={status.split("/")[0] === status.split("/")[1]}
+          ip={ip}
+          mgs={mgs}
+          mds={mds}
+          oss={oss}
+          targets={targets}
+          haCluster={haCluster}
+        />
       </Box>
     </Box>
   );

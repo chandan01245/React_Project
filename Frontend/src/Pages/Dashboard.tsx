@@ -1,5 +1,5 @@
-import Header from "../components/Header";
-import Sidebar from "../components/Sidebar";
+// import Header from "../components/Header";
+// import Sidebar from "../components/Sidebar";
 import "../App.css";
 import { useNavigate } from "react-router-dom";
 import { Typography } from "@mui/material";
@@ -57,33 +57,26 @@ function Dashboard() {
   ];
 
   return (
-    <div className="flex h-screen w-screen bg-white text-black overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-col flex-1 h-full">
-        <Header />
-        <div className="flex-1 overflow-auto p-4">
-          <Typography
-            variant="h4"
-            fontWeight="bold"
-            gutterBottom
-            sx={{ color: "#333", mb: 3 }}
-          >
-            Cluster Overview
-          </Typography>
+    <div className="flex-1 overflow-auto p-4">
+      <Typography
+        variant="h4"
+        fontWeight="bold"
+        gutterBottom
+        sx={{ color: "#333", mb: 3 }}
+      >
+        Cluster Overview
+      </Typography>
 
-          {/* Responsive grid using Tailwind CSS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {nodes.map((node, index) => (
-              <div
-                key={index}
-                className="cursor-pointer"
-                onClick={() => navigate("/node", { state: node })}
-              >
-                <HealthIndicator {...node} />
-              </div>
-            ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {nodes.map((node, index) => (
+          <div
+            key={index}
+            className="cursor-pointer"
+            onClick={() => navigate("/node", { state: node })}
+          >
+            <HealthIndicator {...node} />
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
