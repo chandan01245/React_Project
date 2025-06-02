@@ -1,6 +1,5 @@
 import { Box, Grid, Typography } from "@mui/material";
-import Sidebar from "../components/ui/Sidebar";
-import { useLocation } from "react-router-dom";
+import Sidebar from "../Components/Sidebar";
 import HealthIndicator from "./HealthIndicator";
 
 function Node() {

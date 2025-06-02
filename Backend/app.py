@@ -1,8 +1,6 @@
 import base64
 import datetime
 import io
-from functools import wraps
-
 import jwt
 import pyotp
 import qrcode
@@ -10,9 +8,19 @@ from flask import Flask, jsonify, make_response, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, request, redirect, render_template_string, session
+from ldap3 import Server, Connection, ALL, NTLM
+
+
+LDAP_SERVER = 'ldap://localhost'
+LDAP_BASE_DN = 'dc=example,dc=com'
+LDAP_ADMIN_DN = 'dc=example,dc=com'
+LDAP_ADMIN_PASSWORD = 'chandan01245'
 
 # --- Flask App Setup ---
 app = Flask(__name__)
+
+app.secret_key = 'supersecretkey'
 CORS(app, resources={
     r"/app/*": {
         "origins": ["http://localhost:5173"],
@@ -22,7 +30,7 @@ CORS(app, resources={
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@localhost:5432/Dummy_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:DBUSER@localhost:5432/Dummy_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -47,33 +55,79 @@ class User(db.Model):
 		return check_password_hash(self.password_hash, password)
 
 def generate_token(user):
-	payload = {
-		'user_id': user.id,
-		'exp': datetime.datetime.now() + datetime.timedelta(hours=12)
-	}
-	return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+    payload = {
+        'user_id': user.id,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=12)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 # --- Routes ---
 # returns "API Works" when we use GET.
-# returns the data that we send when we use POST.
 @app.route('/app/login', methods=['POST'])
 def input_form():
-	data = request.get_json()
-	email = data.get("email")
-	password = data.get("password")
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
 
-	user = User.query.filter_by(email=email).first()
-	if user and user.check_password(password):
-		token = generate_token(user)
-		# Only require 2FA if it's enabled for the user
-		return jsonify({
-			'token': token,
-			'user_group': user.user_group,
-			'2fa_required': user.is_2fa_enabled,
-			'user_id': user.id
-		}), 200
-	else:
-		return jsonify({'error': 'Invalid credentials'}), 401
+    print(f"[DEBUG] Received login request - Email: {email}")
+
+    username = email.split('@')[0]
+
+    # Hardcoded OU mapping
+    user_ou_map = {
+        'chandan': 'admin',
+        'jonathan': 'viewer',
+        'madhu': 'viewer'
+    }
+
+    user_ou = user_ou_map.get(username)
+    if not user_ou:
+        print(f"[ERROR] Unknown user or OU not defined for username: {username}")
+        return jsonify({'error': 'User not recognized'}), 401
+
+    user_dn = f'uid={username},ou={user_ou},{LDAP_BASE_DN}'
+    print(f"[DEBUG] Constructed user_dn: {user_dn}")
+
+    try:
+        server = Server(LDAP_SERVER, get_info=ALL)
+        print(f"[DEBUG] Connecting to LDAP server: {LDAP_SERVER}")
+
+        conn = Connection(server, user=user_dn, password=password)
+        print(f"[DEBUG] Attempting to bind...")
+
+        if conn.bind():
+	        print(f"[DEBUG] LDAP bind successful for {user_dn}")
+	        user = User.query.filter_by(email=email).first()
+	        token = generate_token(user)
+	        session['user'] = email
+	        session['role'] = user_ou
+	        return jsonify({
+			    'message': 'Login successful',
+			    'user': email,
+			    'role': user_ou,
+			    'token': token,
+			    '2fa_required': user.is_2fa_enabled,  
+			    'user_id': user.id
+			}), 200
+        else:
+            print(f"[DEBUG] LDAP bind failed. Result: {conn.result}")
+            return jsonify({'error': 'Invalid credentials'}), 401
+    except Exception as e:
+        print(f"[ERROR] LDAP connection exception: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
+
+
+@app.route('/protected')
+def protected():
+    if 'user' in session:
+        return f"Welcome, {session['user']}! <a href='/logout'>Logout</a>"
+    return redirect('/')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
 
 @app.route('/app/2fa', methods=['POST'])
 def setup_2fa():
@@ -113,6 +167,8 @@ def setup_2fa():
 		return jsonify({'qr_code': img_b64}), 200
 
 	except Exception as e:
+		import traceback
+		traceback.print_exc()
 		return jsonify({'error': 'Failed to generate QR code'}), 500
 
 @app.route('/app/user', methods=['GET'])
