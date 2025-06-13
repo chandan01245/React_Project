@@ -9,12 +9,12 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import Flask, request, redirect, render_template_string, session
-from ldap3 import Server, Connection, ALL, NTLM
+from ldap3 import Server, Connection, ALL, SUBTREE
+from ldap3.core.exceptions import LDAPBindError
 
 
-LDAP_SERVER = 'ldap://localhost'
+LDAP_SERVER = 'ldap://192.168.1.4'
 LDAP_BASE_DN = 'dc=example,dc=com'
-LDAP_ADMIN_DN = 'dc=example,dc=com'
 LDAP_ADMIN_PASSWORD = 'chandan01245'
 
 # --- Flask App Setup ---
@@ -23,14 +23,15 @@ app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 CORS(app, resources={
     r"/app/*": {
-        "origins": ["http://localhost:5173"],
+        "origins": ["http://127.0.0.1:5173", "http://localhost:5173"],
+		"supports_credentials": True,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:DBUSER@localhost:5432/Dummy_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@172.24.112.1:5432/Dummy_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -71,50 +72,67 @@ def input_form():
 
     print(f"[DEBUG] Received login request - Email: {email}")
 
-    username = email.split('@')[0]
-
-    # Hardcoded OU mapping
-    user_ou_map = {
-        'chandan': 'admin',
-        'jonathan': 'viewer',
-        'madhu': 'viewer'
-    }
-
-    user_ou = user_ou_map.get(username)
-    if not user_ou:
-        print(f"[ERROR] Unknown user or OU not defined for username: {username}")
-        return jsonify({'error': 'User not recognized'}), 401
-
-    user_dn = f'uid={username},ou={user_ou},{LDAP_BASE_DN}'
-    print(f"[DEBUG] Constructed user_dn: {user_dn}")
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
 
     try:
         server = Server(LDAP_SERVER, get_info=ALL)
-        print(f"[DEBUG] Connecting to LDAP server: {LDAP_SERVER}")
+        conn = Connection(server, auto_bind=True)
 
+        # Search for DN using mail
+        print(f"[DEBUG] Searching for user with mail={email}")
+        conn.search(
+            search_base=LDAP_BASE_DN,
+            search_filter=f"(mail={email})",
+            search_scope=SUBTREE,
+            attributes=[]
+        )
+
+        if not conn.entries:
+            print(f"[ERROR] No user found for email: {email}")
+            return jsonify({'error': 'User not found in LDAP'}), 404
+
+        user_dn = conn.entries[0].entry_dn
+        print(f"[DEBUG] Found user DN: {user_dn}")
+
+        # Bind with DN and password
         conn = Connection(server, user=user_dn, password=password)
-        print(f"[DEBUG] Attempting to bind...")
-
-        if conn.bind():
-	        print(f"[DEBUG] LDAP bind successful for {user_dn}")
-	        user = User.query.filter_by(email=email).first()
-	        token = generate_token(user)
-	        session['user'] = email
-	        session['role'] = user_ou
-	        return jsonify({
-			    'message': 'Login successful',
-			    'user': email,
-			    'role': user_ou,
-			    'token': token,
-			    '2fa_required': user.is_2fa_enabled,  
-			    'user_id': user.id
-			}), 200
-        else:
-            print(f"[DEBUG] LDAP bind failed. Result: {conn.result}")
+        print("[DEBUG] Attempting LDAP bind...")
+        if not conn.bind():
+            print(f"[ERROR] LDAP bind failed. Result: {conn.result}")
             return jsonify({'error': 'Invalid credentials'}), 401
+
+        print(f"[DEBUG] LDAP bind successful for {user_dn}")
+
+        # Extract OU from DN (e.g., ou=admin,...)
+        user_ou = next((rdn.split('=')[1] for rdn in user_dn.split(',') if rdn.lower().startswith('ou=')), None)
+        print(f"[DEBUG] Extracted OU: {user_ou}")
+
+        # Local DB check
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            print("[ERROR] User not found in local DB.")
+            return jsonify({'error': 'User metadata not found'}), 404
+
+        token = generate_token(user)
+        session['user'] = email
+        session['role'] = user_ou
+
+        return jsonify({
+            'message': 'Login successful',
+            'user': email,
+            'role': user_ou,
+            'token': token,
+            '2fa_required': user.is_2fa_enabled,
+            'user_id': user.id
+        }), 200
+
+    except LDAPBindError as e:
+        print(f"[ERROR] LDAP bind error: {str(e)}")
+        return jsonify({'error': 'LDAP bind failed'}), 401
+
     except Exception as e:
         print(f"[ERROR] LDAP connection exception: {str(e)}")
-        traceback.print_exc()
         return jsonify({'error': f'LDAP error: {str(e)}'}), 500
 
 
@@ -291,4 +309,4 @@ if __name__ == '__main__':
     #         user._2fa_completed = False  # Initialize 2FA completion status
     #         db.session.add(user)
     #     db.session.commit()
-    app.run(debug = True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

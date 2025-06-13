@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@mui/icons-material": "^7.0.2"
+    "@mui/icons-material": "^7.0.2",
+    "vite": "^6.3.5"
   }
 }

@@ -1,10 +1,10 @@
 // src/App.tsx
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
-import TwoFA from "./Components/2FA";
-import Login from "./Components/login";
+import TwoFA from "./components/2FA";
+import Login from "./components/login";
 import ProtectedRoute from "./components/ProtectedRoute";
-import MainLayout from "./components/MainLayout";
+import MainLayout from "./components/mainlayout";
 
 import Dashboard from "./pages/Dashboard";
 import Disk from "./pages/Disk";

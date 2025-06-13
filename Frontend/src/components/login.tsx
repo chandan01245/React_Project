@@ -17,18 +17,23 @@ function Login() {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const validateForm = (): boolean => {
+    console.log("Validating form...");
     if (!email || !password) {
+      console.warn("Validation failed: Missing email or password");
       setError("Please fill in all fields");
       return false;
     }
     if (!email.includes("@")) {
+      console.warn("Validation failed: Invalid email format");
       setError("Please enter a valid email address");
       return false;
     }
     if (password.length < 6) {
+      console.warn("Validation failed: Password too short");
       setError("Password must be at least 6 characters long");
       return false;
     }
+    console.log("Form is valid.");
     return true;
   };
 
@@ -37,28 +42,58 @@ function Login() {
     setError("");
     if (!validateForm()) return;
     setIsLoading(true);
+
+    console.log("Starting login request...");
+    console.log("POST to: http://127.0.0.1:5000/app/login");
+    console.log("Payload:", { email, password });
+
     try {
-      const response = await axios.post("http://127.0.0.1:5000/app/login", {
+      const response = await axios.post("http://localhost:5000/app/login", {
         email,
-        password,
+        password
+      },
+      { 
+        withCredentials: true 
       });
+
+      console.log("Login successful:", response.data);
+
       const user_group = response.data.user_group;
       const twofa_required = response.data["2fa_required"];
-      console.log(twofa_required);
+      console.log("User group:", user_group);
+      console.log("2FA required:", twofa_required);
+
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_group", user_group);
 
       if (twofa_required) {
+        console.log("Navigating to 2FA page...");
         navigate("/2fa", { state: { email } });
       } else {
+        console.log("Navigating to dashboard...");
         navigate("/dashboard");
       }
     } catch (err) {
       const error = err as AxiosError;
-      if (error.response?.status === 401) {
-        setError("Invalid credentials");
+      console.error("Login request failed:", error.message);
+      console.error("Full error object:", error);
+
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Status:", error.response.status);
+        if (error.response.status === 401) {
+          setError("Invalid credentials");
+        } else if (error.response.status === 403) {
+          setError("CORS issue or forbidden access");
+        } else {
+          setError("An error occurred. Please try again later.");
+        }
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        setError("No response from server. Is Flask running?");
       } else {
-        setError("An error occurred. Please try again later.");
+        console.error("Error setting up request:", error.message);
+        setError("Could not initiate request. Check network or config.");
       }
     } finally {
       setIsLoading(false);
