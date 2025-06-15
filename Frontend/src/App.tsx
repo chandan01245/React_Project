@@ -1,16 +1,15 @@
 // src/App.tsx
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
 import TwoFA from "./components/2FA";
 import Login from "./components/login";
 import ProtectedRoute from "./components/ProtectedRoute";
-import MainLayout from "./components/mainlayout";
 
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Disk from "./pages/Disk";
 import Filesystem from "./pages/FileSystem";
-import Node from "./pages/Node";
 import Network from "./pages/Network";
+import Node from "./pages/Node";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Storage from "./pages/Storage";
@@ -32,9 +31,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Dashboard />
-              </MainLayout>
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -42,9 +39,7 @@ function App() {
           path="/node"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Node />
-              </MainLayout>
+              <Node />
             </ProtectedRoute>
           }
         />
@@ -52,9 +47,7 @@ function App() {
           path="/disk"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Disk />
-              </MainLayout>
+              <Disk />
             </ProtectedRoute>
           }
         />
@@ -62,9 +55,7 @@ function App() {
           path="/storage"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Storage />
-              </MainLayout>
+              <Storage />
             </ProtectedRoute>
           }
         />
@@ -72,9 +63,7 @@ function App() {
           path="/network"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Network />
-              </MainLayout>
+              <Network />
             </ProtectedRoute>
           }
         />
@@ -82,9 +71,7 @@ function App() {
           path="/filesystem"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Filesystem />
-              </MainLayout>
+              <Filesystem />
             </ProtectedRoute>
           }
         />
@@ -92,9 +79,7 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <MainLayout>
-                <Settings />
-              </MainLayout>
+              <Settings />
             </ProtectedRoute>
           }
         />

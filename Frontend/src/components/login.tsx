@@ -43,10 +43,6 @@ function Login() {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    console.log("Starting login request...");
-    console.log("POST to: http://127.0.0.1:5000/app/login");
-    console.log("Payload:", { email, password });
-
     try {
       const response = await axios.post("http://localhost:5000/app/login", {
         email,
@@ -56,21 +52,20 @@ function Login() {
         withCredentials: true 
       });
 
-      console.log("Login successful:", response.data);
+  
 
       const user_group = response.data.user_group;
       const twofa_required = response.data["2fa_required"];
-      console.log("User group:", user_group);
-      console.log("2FA required:", twofa_required);
+  
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_group", user_group);
 
       if (twofa_required) {
-        console.log("Navigating to 2FA page...");
+      
         navigate("/2fa", { state: { email } });
       } else {
-        console.log("Navigating to dashboard...");
+   
         navigate("/dashboard");
       }
     } catch (err) {

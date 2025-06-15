@@ -11,6 +11,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask import Flask, request, redirect, render_template_string, session
 from ldap3 import Server, Connection, ALL, SUBTREE
 from ldap3.core.exceptions import LDAPBindError
+from ldap3 import MODIFY_REPLACE
 
 
 LDAP_SERVER = 'ldap://192.168.1.4'
@@ -22,7 +23,7 @@ app = Flask(__name__)
 
 app.secret_key = 'supersecretkey'
 CORS(app, resources={
-    r"/app/*": {
+    r"/*": {
         "origins": ["http://127.0.0.1:5173", "http://localhost:5173"],
 		"supports_credentials": True,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -282,6 +283,93 @@ def update_2fa_status():
     db.session.commit()
 
     return jsonify({'message': '2FA status updated successfully'}), 200
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    user_list = [{'email': u.email, 'password': '*'} for u in users]
+    print(f"[DEBUG] Returning {len(user_list)} users")
+    print(f"[DEBUG] Users: {user_list}")
+    return jsonify(user_list), 200
+
+@app.route('/api/users', methods=['POST'])
+def add_user():
+    print("DEBUG: Received request to add user")
+    data = request.get_json()
+    print(f"DEBUG: Request data: {data}")
+    email = data.get('email')
+    password = data.get('password')
+    user_group = data.get('user_group', 'user')  # default to 'user' if not provided
+    print(f"DEBUG: Email: {email}, Password: {'*' * len(password) if password else None}, Group: {user_group}")
+
+    if not email or not password:
+        print("DEBUG: Missing email or password")
+        return jsonify({'error': 'Email and password required'}), 400
+
+    # Check if user already exists
+    # existing_user = User.query.filter_by(email=email).first()
+    # print(f"DEBUG: Existing user: {existing_user}")
+    # if existing_user:
+    #     print("DEBUG: User already exists")
+    #     return jsonify({'error': 'User already exists'}), 409
+
+    # Create new user and set password and group
+    # user = User(email=email)
+    # user.set_password(password)
+    # user.set_user_group(user_group)
+    # db.session.add(user)
+    # db.session.commit()
+    # print("DEBUG: User added to PostgreSQL")
+
+    # Add to LDAP
+    username = email.split('@')[0]
+    user_dn = f"uid={username},ou=users,{LDAP_BASE_DN}"
+    try:
+        print(f"DEBUG: Connecting to LDAP server {LDAP_SERVER}")
+        server = Server(LDAP_SERVER, get_info=ALL)
+        conn = Connection(server, user=f'cn=admin,{LDAP_BASE_DN}', password=LDAP_ADMIN_PASSWORD, auto_bind=True)
+        print(f"DEBUG: Adding user to LDAP with DN {user_dn}")
+        conn.add(
+            user_dn,
+            ['inetOrgPerson', 'top'],
+            {
+                'cn': username,
+                'sn': username,
+                'mail': email,
+                'userPassword': password
+            }
+        )
+        conn.unbind()
+        print("DEBUG: User added to LDAP")
+    except Exception as e:
+        print(f"DEBUG: LDAP error: {e}")
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
+
+    print("DEBUG: User successfully added to both DB and LDAP")
+    return jsonify({'message': 'User added'}), 201
+
+@app.route('/api/users/<username>', methods=['DELETE'])
+def delete_user(username):
+    # Remove from PostgreSQL
+    user = User.query.filter(User.email.like(f"{username}@%")).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    db.session.delete(user)
+    db.session.commit()
+
+    # Remove from LDAP
+    user_dn = f"uid={username},{LDAP_BASE_DN}"
+    try:
+        server = Server(LDAP_SERVER, get_info=ALL)
+        conn = Connection(server, user=LDAP_BASE_DN, password=LDAP_ADMIN_PASSWORD, auto_bind=True)
+        conn.delete(user_dn)
+        conn.unbind()
+    except Exception as e:
+        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
+
+    return jsonify({'message': 'User deleted'}), 200
 
 users = {
 	"jonathan@example.com": {
