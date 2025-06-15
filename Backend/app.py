@@ -300,7 +300,7 @@ def add_user():
 	def append_to_ldif(new_content):
 		#Write to LDIF File
 		hostname = os.getenv("LDAP_SERVER_IP")
-		port = int(os.getenv("LDAP_SERVER_PORT"))
+		port = 22
 		username = os.getenv("LDAP_USERNAME")
 		password = os.getenv("LDAP_PASSWORD")
 		remote_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>",username)
