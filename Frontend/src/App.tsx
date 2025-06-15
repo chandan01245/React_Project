@@ -1,90 +1,91 @@
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+// src/App.tsx
 import "./App.css";
 import TwoFA from "./components/2FA";
 import Login from "./components/login";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Dashboard from "./Pages/Dashboard";
-import Disk from "./Pages/Disk";
-import Filesystem from "./Pages/FileSystem";
-import Node from "./Pages/Node";
-import Network from "./Pages/Network";
-import NotFound from "./Pages/NotFound";
-import Settings from "./Pages/Settings";
-import Storage from "./Pages/Storage";
 
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import Disk from "./pages/Disk";
+import Filesystem from "./pages/FileSystem";
+import Network from "./pages/Network";
+import Node from "./pages/Node";
+import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
+import Storage from "./pages/Storage";
 
 function App() {
   return (
-      <Router>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route
-            path="/2fa"
-            element={
-              <ProtectedRoute>
-                <TwoFA />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/node"
-            element={
-              <ProtectedRoute>
-                <Node />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/disk"
-            element={
-              <ProtectedRoute>
-                <Disk />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/storage"
-            element={
-              <ProtectedRoute>
-                <Storage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/network"
-            element={
-              <ProtectedRoute>
-                <Network />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/filesystem"
-            element={
-              <ProtectedRoute>
-                <Filesystem />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route
+          path="/2fa"
+          element={
+            <ProtectedRoute>
+              <TwoFA />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/node"
+          element={
+            <ProtectedRoute>
+              <Node />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/disk"
+          element={
+            <ProtectedRoute>
+              <Disk />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/storage"
+          element={
+            <ProtectedRoute>
+              <Storage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/network"
+          element={
+            <ProtectedRoute>
+              <Network />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/filesystem"
+          element={
+            <ProtectedRoute>
+              <Filesystem />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
 }
 
