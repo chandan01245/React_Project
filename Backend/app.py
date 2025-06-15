@@ -14,9 +14,9 @@ from ldap3.core.exceptions import LDAPBindError
 from ldap3 import MODIFY_REPLACE
 
 
-LDAP_SERVER = 'ldap://192.168.1.4'
+LDAP_SERVER = 'ldap://192.168.0.61'
 LDAP_BASE_DN = 'dc=example,dc=com'
-LDAP_ADMIN_PASSWORD = 'chandan01245'
+LDAP_ADMIN_PASSWORD = 'ILAeon@12'
 
 # --- Flask App Setup ---
 app = Flask(__name__)
@@ -32,7 +32,7 @@ CORS(app, resources={
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@172.24.112.1:5432/Dummy_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ILIkari7@172.28.112.1:5432/kero'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -307,23 +307,23 @@ def add_user():
         return jsonify({'error': 'Email and password required'}), 400
 
     # Check if user already exists
-    # existing_user = User.query.filter_by(email=email).first()
-    # print(f"DEBUG: Existing user: {existing_user}")
-    # if existing_user:
-    #     print("DEBUG: User already exists")
-    #     return jsonify({'error': 'User already exists'}), 409
+    existing_user = User.query.filter_by(email=email).first()
+    print(f"DEBUG: Existing user: {existing_user}")
+    if existing_user:
+        print("DEBUG: User already exists")
+        return jsonify({'error': 'User already exists'}), 409
 
     # Create new user and set password and group
-    # user = User(email=email)
-    # user.set_password(password)
-    # user.set_user_group(user_group)
-    # db.session.add(user)
-    # db.session.commit()
-    # print("DEBUG: User added to PostgreSQL")
+    user = User(email=email)
+    user.set_password(password)
+    user.set_user_group(user_group)
+    db.session.add(user)
+    db.session.commit()
+    print("DEBUG: User added to PostgreSQL")
 
     # Add to LDAP
     username = email.split('@')[0]
-    user_dn = f"uid={username},ou=users,{LDAP_BASE_DN}"
+    user_dn = f"uid={username},ou=viewer,{LDAP_BASE_DN}"
     try:
         print(f"DEBUG: Connecting to LDAP server {LDAP_SERVER}")
         server = Server(LDAP_SERVER, get_info=ALL)
@@ -390,11 +390,17 @@ users = {
 if __name__ == '__main__':
     # with app.app_context():
     #     db.create_all()
+    #     print("Created Users")
     #     for email in users:
     #         user = User(email=email)
+    #         print("Created User")
     #         user.set_password(users[email]["pwd"])
+    #         print("Set Password")
     #         user.set_user_group(users[email]["group"])
+    #         print("Set Group")
     #         user._2fa_completed = False  # Initialize 2FA completion status
     #         db.session.add(user)
+    #         print("Added User to Session")
     #     db.session.commit()
+    #     print("Committed Session")
     app.run(host='0.0.0.0', port=5000, debug=True)
