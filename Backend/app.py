@@ -17,9 +17,9 @@ from ldap3.core.exceptions import LDAPBindError
 from ldap3 import MODIFY_REPLACE
 
 
-LDAP_SERVER = 'ldap://192.168.1.4'
+LDAP_SERVER = 'ldap://192.168.0.61'
 LDAP_BASE_DN = 'dc=example,dc=com'
-LDAP_ADMIN_PASSWORD = 'chandan01245'
+LDAP_ADMIN_PASSWORD = 'ILAeon@12'
 
 # --- Flask App Setup ---
 app = Flask(__name__)
@@ -35,7 +35,7 @@ CORS(app, resources={
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@172.24.112.1:5432/Dummy_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ILIkari7@172.28.112.1:5432/kero'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -318,7 +318,7 @@ def add_user():
 			existing_content = ''  # If file doesn't exist, treat as empty
 
 		# Step 3: Append new content
-		combined_content = existing_content + new_content
+		combined_content = existing_content.strip() + new_content
 
 		# Step 4: Write it all back (overwrite mode)
 		with sftp.file(remote_path, 'w') as remote_file:
@@ -382,7 +382,7 @@ def add_user():
 		return jsonify({'error': f'LDAP error: {str(e)}'}), 500
 
 	#Write to LDIF File
-	user_entry = f"""\n# {user_group.title()} user: {username}
+	user_entry = f"""\n\n# {user_group.title()} user: {username}
 dn: {user_dn}
 objectClass: top
 objectClass: inetOrgPerson
@@ -398,65 +398,100 @@ userPassword: {password}
 
 @app.route('/api/users/<path:email>', methods=['DELETE'])
 def delete_user(email):
-    print(f"DEBUG: Received request to delete user: {email}")
-    user = User.query.filter_by(email=email).first()
-    print(f"DEBUG: User found: {user}")
-    if not user:
-        print("DEBUG: User not found in database")
-        return jsonify({'error': 'User not found'}), 404
+	def delete_from_ldif(email):
+		#Write to LDIF File
+		hostname = os.getenv("LDAP_SERVER_IP")
+		port = 22
+		username = os.getenv("LDAP_USERNAME")
+		password = os.getenv("LDAP_PASSWORD")
+		remote_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>",username)
 
-    try:
-        db.session.delete(user)
-        db.session.commit()
-        print("DEBUG: User deleted from database")
-    except Exception as e:
-        print(f"DEBUG: Error deleting user from database: {e}")
-        return jsonify({'error': f'Database error: {str(e)}'}), 500
+		# Step 1: Connect
+		transport = paramiko.Transport((hostname, port))
+		transport.connect(username=username, password=password)
+		sftp = paramiko.SFTPClient.from_transport(transport)
 
-    # Remove from LDAP LDIF file using paramiko
-    username = email.split('@')[0]
-    try:
-        hostname = os.getenv("LDAP_SERVER_IP")
-        port = 22
-        ldap_username = os.getenv("LDAP_USERNAME")
-        ldap_password = os.getenv("LDAP_PASSWORD")
-        remote_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>", ldap_username)
+		# Step 2: Read existing file content
+		try:
+			with sftp.file(remote_path, 'r') as remote_file:
+				existing_content = remote_file.read().decode()
+		except IOError:
+			existing_content = ''  # If file doesn't exist, treat as empty
 
-        print(f"DEBUG: Connecting to SFTP {hostname}:{port} as {ldap_username}")
-        transport = paramiko.Transport((hostname, port))
-        transport.connect(username=ldap_username, password=ldap_password)
-        sftp = paramiko.SFTPClient.from_transport(transport)
+		# Step 3: Delete content from it
+		user_entries = existing_content.split('#')
+		trimmed_user_entries = [entry for entry in user_entries if email not in entry]
 
-        # Read existing file content
-        try:
-            with sftp.file(remote_path, 'r') as remote_file:
-                existing_content = remote_file.read().decode()
-        except IOError:
-            print("DEBUG: LDIF file not found, skipping LDAP deletion.")
-            existing_content = ''
+		# Step 4: Write it all back (overwrite mode)
+		with sftp.file(remote_path, 'w') as remote_file:
+			remote_file.write("#".join(trimmed_user_entries))
+			
+		# Cleanup
+		sftp.close()
+		transport.close()
 
-        # Remove user entry from LDIF content
-        user_dn = f"uid={username},{LDAP_BASE_DN}"
-        print(f"DEBUG: Removing user DN from LDIF: {user_dn}")
-        # Simple approach: remove lines between "dn: ..." and next blank line if dn matches user_dn
-        import re
-        pattern = rf"dn: {re.escape(user_dn)}[^\n]*\n(?:[^\n]*\n)*?\n"
-        new_content, count = re.subn(pattern, '', existing_content)
-        print(f"DEBUG: Entries removed: {count}")
+	
+	print(f"DEBUG: Received request to delete user: {email}")
+	user = User.query.filter_by(email=email).first()
+	print(f"DEBUG: User found: {user}")
+	delete_from_ldif(email)
 
-        # Write updated content back
-        with sftp.file(remote_path, 'w') as remote_file:
-            remote_file.write(new_content)
+	if not user:
+		print("DEBUG: User not found in database")
+		return jsonify({'error': 'User not found'}), 404
 
-        sftp.close()
-        transport.close()
-        print("DEBUG: User deleted from LDIF file via SFTP")
-    except Exception as e:
-        print(f"DEBUG: LDAP/LDIF error: {e}")
-        return jsonify({'error': f'LDAP/LDIF error: {str(e)}'}), 500
+	try:
+		db.session.delete(user)
+		db.session.commit()
+		print("DEBUG: User deleted from database")
+	except Exception as e:
+		print(f"DEBUG: Error deleting user from database: {e}")
+		return jsonify({'error': f'Database error: {str(e)}'}), 500
 
-    print("DEBUG: User successfully deleted from both DB and LDAP/LDIF")
-    return jsonify({'message': 'User deleted'}), 200
+	# Remove from LDAP LDIF file using paramiko
+	username = email.split('@')[0]
+	try:
+		hostname = os.getenv("LDAP_SERVER_IP")
+		port = 22
+		ldap_username = os.getenv("LDAP_USERNAME")
+		ldap_password = os.getenv("LDAP_PASSWORD")
+		remote_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>", ldap_username)
+
+		print(f"DEBUG: Connecting to SFTP {hostname}:{port} as {ldap_username}")
+		transport = paramiko.Transport((hostname, port))
+		transport.connect(username=ldap_username, password=ldap_password)
+		sftp = paramiko.SFTPClient.from_transport(transport)
+
+		# Read existing file content
+		try:
+			with sftp.file(remote_path, 'r') as remote_file:
+				existing_content = remote_file.read().decode()
+		except IOError:
+			print("DEBUG: LDIF file not found, skipping LDAP deletion.")
+			existing_content = ''
+
+		# Remove user entry from LDIF content
+		user_dn = f"uid={username},{LDAP_BASE_DN}"
+		print(f"DEBUG: Removing user DN from LDIF: {user_dn}")
+		# Simple approach: remove lines between "dn: ..." and next blank line if dn matches user_dn
+		import re
+		pattern = rf"dn: {re.escape(user_dn)}[^\n]*\n(?:[^\n]*\n)*?\n"
+		new_content, count = re.subn(pattern, '', existing_content)
+		print(f"DEBUG: Entries removed: {count}")
+
+		# Write updated content back
+		with sftp.file(remote_path, 'w') as remote_file:
+			remote_file.write(new_content)
+
+		sftp.close()
+		transport.close()
+		print("DEBUG: User deleted from LDIF file via SFTP")
+	except Exception as e:
+		print(f"DEBUG: LDAP/LDIF error: {e}")
+		return jsonify({'error': f'LDAP/LDIF error: {str(e)}'}), 500
+
+	print("DEBUG: User successfully deleted from both DB and LDAP/LDIF")
+	return jsonify({'message': 'User deleted'}), 200
 
 users = {
 	"jonathan@example.com": {
