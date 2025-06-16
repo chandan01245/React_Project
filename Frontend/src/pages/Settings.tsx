@@ -82,8 +82,7 @@ function Settings() {
   };
   
   const handleDelete = async (email: string) => {
-    const username = email.split("@")[0];
-    await axios.delete(`/api/users/${username}`);
+    await axios.delete(`http://localhost:5000/api/users/${encodeURIComponent(email)}`);
     fetchUsers();
   };
 
@@ -249,7 +248,7 @@ function Settings() {
               }}
               className="w-full p-4 flex justify-between items-center hover:bg-gray-200 transition-colors"
             >
-              <h2 className="text-xl font-semibold">USERS</h2>
+              <h2 className="text-xl font-semibold">Users</h2>
               <svg
                 className={`w-6 h-6 transform transition-transform ${
                   isUsersOpen ? "rotate-180" : ""
