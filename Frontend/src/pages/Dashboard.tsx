@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
+import GrafanaDashboard from '../components/GrafanaDashboard';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -62,6 +63,10 @@ function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
             {/* Render nodes or other dashboard info */}
+            <div>
+              <h1>Server Metrics</h1>
+              <GrafanaDashboard />
+            </div>
           </div>
           <Outlet />
         </div>

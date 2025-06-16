@@ -17,9 +17,11 @@ from ldap3.core.exceptions import LDAPBindError
 from ldap3 import MODIFY_REPLACE
 
 
-LDAP_SERVER = 'ldap://192.168.0.61'
+load_dotenv()
+
+LDAP_SERVER = f'ldap://{os.getenv("LDAP_SERVER_IP")}'
 LDAP_BASE_DN = 'dc=example,dc=com'
-LDAP_ADMIN_PASSWORD = 'ILAeon@12'
+LDAP_ADMIN_PASSWORD = os.getenv("LDAP_ADMIN_PASSWORD")
 
 # --- Flask App Setup ---
 app = Flask(__name__)
@@ -35,7 +37,7 @@ CORS(app, resources={
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ILIkari7@172.28.112.1:5432/kero'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URI")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
