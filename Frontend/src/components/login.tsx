@@ -23,11 +23,6 @@ function Login() {
       setError("Please fill in all fields");
       return false;
     }
-    if (!email.includes("@")) {
-      console.warn("Validation failed: Invalid email format");
-      setError("Please enter a valid email address");
-      return false;
-    }
     if (password.length < 6) {
       console.warn("Validation failed: Password too short");
       setError("Password must be at least 6 characters long");
@@ -126,12 +121,12 @@ function Login() {
           <div className="w-full flex items-center bg-gray-100 text-gray-700 p-2 rounded-xl">
             <MdAlternateEmail className="text-gray-400" />
             <input
-              type="email"
+              type="string"
               value={email}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setEmail(e.target.value)
               }
-              placeholder="Email account"
+              placeholder="Email or Username"
               className="bg-transparent border-0 w-full outline-none text-sm md:text-base px-2"
               disabled={isLoading}
             />

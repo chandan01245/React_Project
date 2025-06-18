@@ -35,7 +35,7 @@ CORS(app, resources={
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@172.24.112.1:5432/Dummy_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:DBUSER@db:5432/Dummy_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -70,74 +70,79 @@ def generate_token(user):
 # returns "API Works" when we use GET.
 @app.route('/app/login', methods=['POST'])
 def input_form():
-	data = request.get_json()
-	email = data.get("email")
-	password = data.get("password")
+    data = request.get_json()
+    identifier = data.get("email")  # This can be email or username
+    password = data.get("password")
 
-	print(f"[DEBUG] Received login request - Email: {email}")
+    print(f"[DEBUG] Received login request - Identifier: {identifier}")
 
-	if not email or not password:
-		return jsonify({'error': 'Email and password are required'}), 400
+    if not identifier or not password:
+        return jsonify({'error': 'Email/Username and password are required'}), 400
 
-	try:
-		server = Server(LDAP_SERVER, get_info=ALL)
-		conn = Connection(server, auto_bind=True)
+    try:
+        server = Server(LDAP_SERVER, get_info=ALL)
+        conn = Connection(server, auto_bind=True)
 
-		# Search for DN using mail
-		print(f"[DEBUG] Searching for user with mail={email}")
-		conn.search(
-			search_base=LDAP_BASE_DN,
-			search_filter=f"(mail={email})",
-			search_scope=SUBTREE,
-			attributes=[]
-		)
+        # Determine if identifier is an email or username
+        if '@' in identifier:
+            search_filter = f"(mail={identifier})"
+        else:
+            search_filter = f"(uid={identifier})"
 
-		if not conn.entries:
-			print(f"[ERROR] No user found for email: {email}")
-			return jsonify({'error': 'User not found in LDAP'}), 404
+        print(f"[DEBUG] Searching for user with filter: {search_filter}")
+        conn.search(
+            search_base=LDAP_BASE_DN,
+            search_filter=search_filter,
+            search_scope=SUBTREE,
+            attributes=[]
+        )
 
-		user_dn = conn.entries[0].entry_dn
-		print(f"[DEBUG] Found user DN: {user_dn}")
+        if not conn.entries:
+            print(f"[ERROR] No user found for identifier: {identifier}")
+            return jsonify({'error': 'User not found in LDAP'}), 404
 
-		# Bind with DN and password
-		conn = Connection(server, user=user_dn, password=password)
-		print("[DEBUG] Attempting LDAP bind...")
-		if not conn.bind():
-			print(f"[ERROR] LDAP bind failed. Result: {conn.result}")
-			return jsonify({'error': 'Invalid credentials'}), 401
+        user_dn = conn.entries[0].entry_dn
+        print(f"[DEBUG] Found user DN: {user_dn}")
 
-		print(f"[DEBUG] LDAP bind successful for {user_dn}")
+        # Bind with DN and password
+        conn = Connection(server, user=user_dn, password=password)
+        print("[DEBUG] Attempting LDAP bind...")
+        if not conn.bind():
+            print(f"[ERROR] LDAP bind failed. Result: {conn.result}")
+            return jsonify({'error': 'Invalid credentials'}), 401
 
-		# Extract OU from DN (e.g., ou=admin,...)
-		user_ou = next((rdn.split('=')[1] for rdn in user_dn.split(',') if rdn.lower().startswith('ou=')), None)
-		print(f"[DEBUG] Extracted OU: {user_ou}")
+        print(f"[DEBUG] LDAP bind successful for {user_dn}")
 
-		# Local DB check
-		user = User.query.filter_by(email=email).first()
-		if not user:
-			print("[ERROR] User not found in local DB.")
-			return jsonify({'error': 'User metadata not found'}), 404
+        # Extract OU from DN (e.g., ou=admin,...)
+        user_ou = next((rdn.split('=')[1] for rdn in user_dn.split(',') if rdn.lower().startswith('ou=')), None)
+        print(f"[DEBUG] Extracted OU: {user_ou}")
 
-		token = generate_token(user)
-		session['user'] = email
-		session['role'] = user_ou
+        # Local DB check
+        user = User.query.filter_by(email=identifier).first()
+        # if not user:
+        #     print("[ERROR] User not found in local DB.")
+        #     return jsonify({'error': 'User metadata not found'}), 404
 
-		return jsonify({
-			'message': 'Login successful',
-			'user': email,
-			'role': user_ou,
-			'token': token,
-			'2fa_required': user.is_2fa_enabled,
-			'user_id': user.id
-		}), 200
+        token = generate_token(user)
+        session['user'] = identifier
+        session['role'] = user_ou
 
-	except LDAPBindError as e:
-		print(f"[ERROR] LDAP bind error: {str(e)}")
-		return jsonify({'error': 'LDAP bind failed'}), 401
+        return jsonify({
+            'message': 'Login successful',
+            # 'user': identifier,
+            # 'role': user_ou,
+            # 'token': token,
+            # '2fa_required': user.is_2fa_enabled,
+            # 'user_id': user.id
+        }), 200
 
-	except Exception as e:
-		print(f"[ERROR] LDAP connection exception: {str(e)}")
-		return jsonify({'error': f'LDAP error: {str(e)}'}), 500
+    except LDAPBindError as e:
+        print(f"[ERROR] LDAP bind error: {str(e)}")
+        return jsonify({'error': 'LDAP bind failed'}), 401
+
+    except Exception as e:
+        print(f"[ERROR] LDAP connection exception: {str(e)}")
+        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
 
 
 @app.route('/protected')
@@ -468,7 +473,7 @@ users = {
 		"group": "viewer"
 	},
 	"chandan@example.com": {
-		"pwd": "Hashed-Password",
+		"pwd": "chandan01245",
 		"group": "admin"
 	}
 }
@@ -476,18 +481,18 @@ users = {
 # driver function
 if __name__ == '__main__':
 	# with app.app_context():
-	#     db.create_all()
-	#     print("Created Users")
-	#     for email in users:
-	#         user = User(email=email)
-	#         print("Created User")
-	#         user.set_password(users[email]["pwd"])
-	#         print("Set Password")
-	#         user.set_user_group(users[email]["group"])
-	#         print("Set Group")
-	#         user._2fa_completed = False  # Initialize 2FA completion status
-	#         db.session.add(user)
-	#         print("Added User to Session")
-	#     db.session.commit()
-	#     print("Committed Session")
+	# 	db.create_all()
+	# 	print("Created Users")
+	# 	for email in users:
+	# 		user = User(email=email)
+	# 		print("Created User")
+	# 		user.set_password(users[email]["pwd"])
+	# 		print("Set Password")
+	# 		user.set_user_group(users[email]["group"])
+	# 		print("Set Group")
+	# 		user._2fa_completed = False  # Initialize 2FA completion status
+	# 		db.session.add(user)
+	# 		print("Added User to Session")
+	# 	db.session.commit()
+	# 	print("Committed Session")
 	app.run(host='0.0.0.0', port=5000, debug=True)

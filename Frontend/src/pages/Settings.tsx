@@ -47,6 +47,9 @@ function Settings() {
   const [error, setError] = useState("");
   const [userGroup, setUserGroup] = useState(""); // For admin check
 
+  // Get username from localStorage or context
+  const [username, setUsername] = useState<string>("");
+
   // Fetch the initial 2FA status and email from the database
   useEffect(() => {
     async function fetchUserData() {
@@ -66,6 +69,9 @@ function Settings() {
     // Get user group for admin check
     const group = localStorage.getItem("user_group") || "";
     setUserGroup(group);
+
+    const email = localStorage.getItem("userEmail") || "";
+    setUsername(email.split("@")[0]);
   }, []);
 
   // USERS logic
@@ -191,8 +197,9 @@ function Settings() {
   return (
     <div className="flex h-screen w-screen bg-white dark:bg-black text-black dark:text-white transition-colors duration-300 overflow-hidden">
       <Sidebar />
-      <div className="flex-1 overflow-auto p-4">
-        <Header />
+      <div className="flex-1 overflow-auto">
+        {/* Only pass the pageTitle or nothing at all */}
+        <Header pageTitle="Settings" /> 
         <h1 className="text-2xl font-bold mb-6">Settings</h1>
         {/* 2FA Settings */}
         <div className="bg-gray-100 rounded-lg overflow-hidden mb-6">
@@ -345,6 +352,7 @@ function Settings() {
             </IconButton>
           </DialogTitle>
           <DialogContent>
+            
             <TextField
               label="User Email"
               fullWidth
