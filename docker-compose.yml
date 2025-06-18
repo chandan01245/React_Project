@@ -1,10 +1,10 @@
 version: "3.8"
 services:
   db:
-    image: postgres:15
+    image: postgres:17
     environment:
       POSTGRES_DB: Dummy_db
-      POSTGRES_USER: user
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: DBUSER
     ports:
       - "5432:5432"
@@ -17,11 +17,12 @@ services:
       dockerfile: Backend/Dockerfile
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://user:DBUSER@db:5432/Dummy_db
-      - LDAP_SERVER_IP="192.168.1.4"
-      - LDAP_USERNAME="Chandan"
-      - LDAP_PASSWORD="chandan01245"
-      - LDAP_PATH="/home/<DUMMY_USERNAME>/Desktop/users.ldif"
+      - DATABASE_URI=postgresql://user:DBUSER@db:5432/Dummy_db
+      - LDAP_SERVER_IP=ldap
+      - LDAP_BASE_DN=dc=example,dc=com
+      - LDAP_USERNAME=Chandan
+      - LDAP_ADMIN_PASSWORD=chandan01245
+      - LDAP_PATH=/home/<DUMMY_USERNAME>/Desktop/users.ldif
 
     depends_on:
       - db

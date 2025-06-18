@@ -6,7 +6,7 @@ WORKDIR /app
 COPY Backend/ ./
 
 RUN pip install --upgrade pip
-RUN pip install -r Pipfile
+RUN pip install -r requirements.txt 
 
 EXPOSE 5000
 
