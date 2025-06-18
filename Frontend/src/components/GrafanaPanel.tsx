@@ -1,12 +1,12 @@
-// GrafanaDashboard.tsx
+// GrafanaPanel.tsx
 
 import { useRef, useState, MouseEvent } from "react";
 
-interface GrafanaDashboardProps {
+interface GrafanaPanelProps {
   src: string;
 }
 
-const GrafanaDashboard = ({ src }: GrafanaDashboardProps) => {
+const GrafanaPanel = ({ src }: GrafanaPanelProps) => {
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
     width: 600,
     height: 450,
@@ -56,4 +56,4 @@ const GrafanaDashboard = ({ src }: GrafanaDashboardProps) => {
   );
 };
 
-export default GrafanaDashboard;
+export default GrafanaPanel;
