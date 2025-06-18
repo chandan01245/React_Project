@@ -19,7 +19,7 @@ from ldap3 import MODIFY_REPLACE
 
 load_dotenv()
 
-LDAP_SERVER = f'ldap://{os.getenv("LDAP_SERVER_IP")}'
+LDAP_SERVER = f'ldap://{os.getenv("LDAP_SERVER_IP")}:389'
 LDAP_BASE_DN = 'dc=example,dc=com'
 LDAP_ADMIN_PASSWORD = os.getenv("LDAP_ADMIN_PASSWORD")
 
@@ -37,11 +37,7 @@ CORS(app, resources={
 })
 SECRET_KEY = 'Hashed-Password'
 # PostgreSQL database config (adjust this!)
-<<<<<<< HEAD
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URI")
-=======
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URI")
->>>>>>> cda52a0b3135ccb55a5d33d9897972ee4b264c42
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -308,141 +304,56 @@ def get_users():
 
 @app.route('/api/users', methods=['POST'])
 def add_user():
-	def append_to_ldif(new_content):
-		#Write to LDIF File
-		hostname = os.getenv("LDAP_SERVER_IP")
-		port = 22
-		username = os.getenv("LDAP_USERNAME")
-		password = os.getenv("LDAP_PASSWORD")
-		remote_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>",username)
+    print("DEBUG: Received request to add user")
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    user_group = data.get('user_group', 'viewer')
+    if not email or not password:
+        return jsonify({'error': 'Email and password required'}), 400
 
-		# Step 1: Connect
-		transport = paramiko.Transport((hostname, port))
-		transport.connect(username=username, password=password)
-		sftp = paramiko.SFTPClient.from_transport(transport)
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        return jsonify({'error': 'User already exists'}), 409
 
-		# Step 2: Read existing file content
-		try:
-			with sftp.file(remote_path, 'r') as remote_file:
-				existing_content = remote_file.read().decode()
-		except IOError:
-			existing_content = ''  # If file doesn't exist, treat as empty
+    user = User(email=email)
+    user.set_password(password)
+    user.set_user_group(user_group)
+    db.session.add(user)
+    db.session.commit()
+    print("DEBUG: User added to PostgreSQL")
 
-		# Step 3: Append new content
-		combined_content = existing_content.strip() + new_content
+    username = email.split('@')[0]
+    user_dn = f"uid={username},ou={user_group},{LDAP_BASE_DN}"
+    try:
+        print(f"DEBUG: Connecting to LDAP server {LDAP_SERVER}")
+        server = Server(LDAP_SERVER, get_info=ALL)
+        conn = Connection(server, user=f'cn=admin,{LDAP_BASE_DN}', password=LDAP_ADMIN_PASSWORD, auto_bind=True)
+        print(f"DEBUG: Adding user to LDAP with DN {user_dn}")
+        conn.add(
+            user_dn,
+            ['inetOrgPerson', 'top'],
+            {
+                'cn': username,
+                'sn': username,
+                'mail': email,
+                'userPassword': password
+            }
+        )
+        conn.unbind()
+        print("DEBUG: User added to LDAP")
+    except Exception as e:
+        print(f"DEBUG: LDAP error: {e}")
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
 
-		# Step 4: Write it all back (overwrite mode)
-		with sftp.file(remote_path, 'w') as remote_file:
-			remote_file.write(combined_content)
-			
-		# Cleanup
-		sftp.close()
-		transport.close()
-
-	print("DEBUG: Received request to add user")
-	data = request.get_json()
-	print(f"DEBUG: Request data: {data}")
-	email = data.get('email')
-	password = data.get('password')
-	user_group = data.get('user_group', 'viewer')  # default to 'user' if not provided
-	print(f"DEBUG: Email: {email}, Password: {'*' * len(password) if password else None}, Group: {user_group}")
-
-	if not email or not password:
-		print("DEBUG: Missing email or password")
-		return jsonify({'error': 'Email and password required'}), 400
-
-	# Check if user already exists
-	existing_user = User.query.filter_by(email=email).first()
-	print(f"DEBUG: Existing user: {existing_user}")
-	if existing_user:
-		print("DEBUG: User already exists")
-		return jsonify({'error': 'User already exists'}), 409
-
-	# Create new user and set password and group
-	user = User(email=email)
-	user.set_password(password)
-	user.set_user_group(user_group)
-	db.session.add(user)
-	db.session.commit()
-	print("DEBUG: User added to PostgreSQL")
-
-	# Add to LDAP
-	username = email.split('@')[0]
-	user_dn = f"uid={username},ou=viewer,{LDAP_BASE_DN}"
-	try:
-		print(f"DEBUG: Connecting to LDAP server {LDAP_SERVER}")
-		server = Server(LDAP_SERVER, get_info=ALL)
-		conn = Connection(server, user=f'cn=admin,{LDAP_BASE_DN}', password=LDAP_ADMIN_PASSWORD, auto_bind=True)
-		print(f"DEBUG: Adding user to LDAP with DN {user_dn}")
-		conn.add(
-			user_dn,
-			['inetOrgPerson', 'top'],
-			{
-				'cn': username,
-				'sn': username,
-				'mail': email,
-				'userPassword': password
-			}
-		)
-		conn.unbind()
-		print("DEBUG: User added to LDAP")
-	except Exception as e:
-		print(f"DEBUG: LDAP error: {e}")
-		db.session.delete(user)
-		db.session.commit()
-		return jsonify({'error': f'LDAP error: {str(e)}'}), 500
-
-	#Write to LDIF File
-	user_entry = f"""\n\n# {user_group.title()} user: {username}
-dn: {user_dn}
-objectClass: top
-objectClass: inetOrgPerson
-cn: {username.split()[0]}
-sn: {username.split()[1] if len(username.split()) > 1 else ""}
-mail: {email}
-userPassword: {password}
-"""
-	append_to_ldif(user_entry)
-
-	print("DEBUG: User successfully added to both DB and LDAP")
-	return jsonify({'message': 'User added'}), 201
+    print("DEBUG: User successfully added to both DB and LDAP")
+    return jsonify({'message': 'User added'}), 201
 
 @app.route('/api/users/<path:email>', methods=['DELETE'])
 def delete_user(email):
-	def delete_from_ldif(email):
-		#Write to LDIF File
-		hostname = os.getenv("LDAP_SERVER_IP")
-		port = 22
-		username = os.getenv("LDAP_USERNAME")
-		password = os.getenv("LDAP_PASSWORD")
-		remote_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>",username)
-
-		# Step 1: Connect
-		transport = paramiko.Transport((hostname, port))
-		transport.connect(username=username, password=password)
-		sftp = paramiko.SFTPClient.from_transport(transport)
-
-		# Step 2: Read existing file content
-		try:
-			with sftp.file(remote_path, 'r') as remote_file:
-				existing_content = remote_file.read().decode()
-		except IOError:
-			existing_content = ''  # If file doesn't exist, treat as empty
-
-		# Step 3: Delete content from it
-		user_entries = existing_content.split('#')
-		trimmed_user_entries = [entry for entry in user_entries if email not in entry]
-
-		# Step 4: Write it all back (overwrite mode)
-		with sftp.file(remote_path, 'w') as remote_file:
-			remote_file.write("#".join(trimmed_user_entries))
-			
-		# Cleanup
-		sftp.close()
-		transport.close()
-
-	
-	print(f"DEBUG: Received request to delete user: {email}")
+    print(f"DEBUG: Received request to delete user: {email}")
 	user = User.query.filter_by(email=email).first()
 	print(f"DEBUG: User found: {user}")
 	delete_from_ldif(email)
