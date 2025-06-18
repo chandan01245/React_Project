@@ -13,6 +13,7 @@ import Node from "./pages/Node";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Storage from "./pages/Storage";
+import Metrics from "./pages/Metrics";
 
 function App() {
   return (
@@ -32,6 +33,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/metrics"
+          element={
+            <ProtectedRoute>
+              <Metrics />
             </ProtectedRoute>
           }
         />
