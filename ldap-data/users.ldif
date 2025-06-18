@@ -1,0 +1,41 @@
+# Organizational Unit: admin
+dn: ou=admin,dc=example,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: admin
+
+# Organizational Unit: viewer
+dn: ou=viewer,dc=example,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: viewer
+
+# Admin user: chandan
+dn: uid=chandan,ou=admin,dc=example,dc=com
+objectClass: top
+objectClass: inetOrgPerson
+cn: Chandan
+sn: Gowda
+uid: chandan
+mail: chandan@example.com
+userPassword: chandan01245
+
+# Viewer user: jonathan
+dn: uid=jonathan,ou=viewer,dc=example,dc=com
+objectClass: top
+objectClass: inetOrgPerson
+cn: Jonathan
+sn: Frazer
+uid: jonathan
+mail: jonathan@example.com
+userPassword: ILIkari7
+
+# Viewer user: madhu
+dn: uid=madhu,ou=viewer,dc=example,dc=com
+objectClass: top
+objectClass: inetOrgPerson
+cn: Madhu
+sn: C
+uid: madhu
+mail: madhu@example.com
+userPassword: Kickass-Password

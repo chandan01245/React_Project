@@ -1,16 +1,11 @@
-# Use Node for build
-FROM node:20 AS build
+FROM node:20
 
 WORKDIR /app
 
 COPY Frontend/ ./
 
 RUN npm install
-RUN npm run build
 
-# Use nginx for serving static files
-FROM nginx:alpine
+EXPOSE 5173
 
-COPY --from=build /app/dist /usr/share/nginx/html
-
-EXPOSE 80
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
