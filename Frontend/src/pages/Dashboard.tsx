@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
+import GrafanaPanel from '../components/GrafanaPanel';
 
 function Dashboard() {
   const navigate = useNavigate();

@@ -8,6 +8,7 @@ import {
   FiLogOut,
   FiSettings,
   FiHome,
+  FiMonitor
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -20,6 +21,7 @@ interface NavItem {
 const Sidebar: React.FC = () => {
   const navItems: NavItem[] = [
     { name: "Dashboard", path: "/dashboard", icon: <FiHome /> },
+    { name: "Metrics", path: "/metrics", icon: <FiMonitor /> },
     { name: "Node", path: "/node", icon: <AiOutlineNodeIndex /> },
     { name: "Disk", path: "/disk", icon: <FiHardDrive /> },
     { name: "Storage", path: "/storage", icon: <FiDatabase /> },
