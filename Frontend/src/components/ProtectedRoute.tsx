@@ -11,7 +11,7 @@ const fetchUserGroup = async (): Promise<string | null> => {
   if (!token) return null;
 
   try {
-    const response = await axios.get("http://127.0.0.1:5000/app/user", {
+    const response = await axios.get("/app/user", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -28,7 +28,7 @@ const fetch2FAStatus = async (): Promise<{ is2FARequired: boolean; is2FAComplete
   if (!token) return null;
 
   try {
-    const response = await axios.get("http://127.0.0.1:5000/app/2fa-status", {
+    const response = await axios.get("/app/2fa-status", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

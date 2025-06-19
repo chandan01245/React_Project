@@ -1,0 +1,25 @@
+# Ignore node_modules to prevent copying local deps into container
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Optional package manager files
+package-lock.json
+yarn.lock
+.pnpm-store
+
+# Build output (if using local build)
+dist
+build
+
+# Git and editor junk
+.git
+.gitignore
+.DS_Store
+*.swp
+*.swo
+.idea
+.vscode
+
+# OS files
+Thumbs.db
