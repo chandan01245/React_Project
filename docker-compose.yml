@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   db:
     image: postgres:17
@@ -16,27 +17,47 @@ services:
       context: .
       dockerfile: Backend/Dockerfile
     environment:
-      - FLASK_ENV=development
-      - DATABASE_URI=postgresql://user:DBUSER@db:5432/Dummy_db
-      - LDAP_SERVER_IP=ldap
-      - LDAP_BASE_DN=dc=example,dc=com
-      - LDAP_USERNAME=Chandan
-      - LDAP_ADMIN_PASSWORD=chandan01245
-      - LDAP_PATH=/home/<DUMMY_USERNAME>/Desktop/users.ldif
-
+      FLASK_ENV: development
+      DATABASE_URI: postgresql://postgres:DBUSER@db:5432/Dummy_db
+      LDAP_SERVER_IP: openldap
+      LDAP_BASE_DN: dc=example,dc=com
+      LDAP_USERNAME: Chandan
+      LDAP_ADMIN_PASSWORD: chandan01245
+      LDAP_PATH: /shared-ldif/users.ldif
     depends_on:
       - db
+      - openldap
     ports:
       - "5000:5000"
+    volumes:
+      - ./ldif:/shared-ldif
 
   frontend:
     build:
       context: .
       dockerfile: Frontend/Dockerfile
     ports:
-      - "3000:80"
+      - "5173:5173"
     depends_on:
       - backend
 
+  openldap:
+    image: osixia/openldap:latest
+    container_name: openldap
+    ports:
+      - "389:389"
+      - "636:636"
+    environment:
+      LDAP_ORGANISATION: "Acceleron"
+      LDAP_DOMAIN: "example.com"
+      LDAP_ADMIN_PASSWORD: "chandan01245"
+    volumes:
+      - ./ldif/users.ldif:/ldif/users.ldif:ro       
+      - ./ldif:/shared-ldif/users.ldif                          
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+
 volumes:
   postgres_data:
+  ldap_data:
+  ldap_config:

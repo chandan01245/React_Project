@@ -37,7 +37,7 @@ function TwoFA() {
       }
 
       const response = await axios.post(
-        "http://127.0.0.1:5000/app/verify-2fa",
+        "app/verify-2fa",
         { email, code },
         {
           headers: {

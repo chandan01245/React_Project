@@ -1,0 +1,31 @@
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments (shouldn't be inside Docker image)
+venv/
+env/
+.venv/
+
+# Logs and runtime files
+*.log
+*.db
+instance/
+*.sqlite3
+
+# IDE and system files
+.git
+.gitignore
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Test artifacts
+.coverage
+*.egg-info/
+dist/
+build/

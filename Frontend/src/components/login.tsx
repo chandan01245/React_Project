@@ -39,7 +39,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/app/login", {
+      const response = await axios.post("/app/login", {
         email,
         password
       },
