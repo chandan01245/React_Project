@@ -309,6 +309,7 @@ def add_user():
     email = data.get('email')
     password = data.get('password')
     user_group = data.get('user_group', 'viewer')
+
     if not email or not password:
         return jsonify({'error': 'Email and password required'}), 400
 
@@ -325,8 +326,8 @@ def add_user():
 
     username = email.split('@')[0]
     user_dn = f"uid={username},ou={user_group},{LDAP_BASE_DN}"
+
     try:
-        print(f"DEBUG: Connecting to LDAP server {LDAP_SERVER}")
         server = Server(LDAP_SERVER, get_info=ALL)
         conn = Connection(server, user=f'cn=admin,{LDAP_BASE_DN}', password=LDAP_ADMIN_PASSWORD, auto_bind=True)
         print(f"DEBUG: Adding user to LDAP with DN {user_dn}")
@@ -343,8 +344,8 @@ def add_user():
         conn.unbind()
         print("DEBUG: User added to LDAP")
 
-        # Append to LDIF file
-        ldif_path = os.getenv("LDAP_PATH").replace("<DUMMY_USERNAME>", username)
+        # Append to LDIF file (optional sync/backup)
+        ldif_path = os.getenv("LDAP_PATH", "/shared-ldif/users.ldif")
         entry = (
             f"dn: {user_dn}\n"
             f"cn: {username}\n"
@@ -354,10 +355,8 @@ def add_user():
             f"objectClass: inetOrgPerson\n"
             f"objectClass: top\n\n"
         )
-
         with open(ldif_path, 'a', encoding='utf-8') as f:
             f.write(entry)
-        print("DEBUG: User appended to LDIF file")
 
     except Exception as e:
         print(f"DEBUG: LDAP error: {e}")
@@ -365,8 +364,8 @@ def add_user():
         db.session.commit()
         return jsonify({'error': f'LDAP error: {str(e)}'}), 500
 
-    print("DEBUG: User successfully added to both DB and LDAP/LDIF")
     return jsonify({'message': 'User added'}), 201
+
 
 @app.route('/api/users/<path:email>', methods=['DELETE'])
 def delete_user(email):
