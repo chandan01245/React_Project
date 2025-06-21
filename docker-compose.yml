@@ -19,14 +19,13 @@ services:
     environment:
       FLASK_ENV: development
       DATABASE_URI: postgresql://postgres:DBUSER@db:5432/Dummy_db
-      LDAP_SERVER_IP: openldap
+      LDAP_SERVER_IP: 192.168.1.4  
       LDAP_BASE_DN: dc=example,dc=com
-      LDAP_USERNAME: cn=admin,dc=example,dc=com
+      LDAP_USERNAME: Chandan
       LDAP_ADMIN_PASSWORD: chandan01245
-      LDAP_PATH: /ldifs/users.ldif
+      LDAP_PATH: /home/<DUMMY_USERNAME>/Desktop/users.ldif
     depends_on:
       - db
-      - openldap
     ports:
       - "5000:5000"
     volumes:
@@ -41,23 +40,5 @@ services:
     depends_on:
       - backend
 
-  openldap:
-    image: bitnami/openldap:latest
-    user: root
-    container_name: openldap
-    ports:
-      - "389:389"
-      - "636:636"
-    environment:
-      LDAP_ADMIN_USERNAME: admin
-      LDAP_ADMIN_PASSWORD: chandan01245
-      LDAP_USERS: chandan,jonathan,madhu
-      LDAP_PASSWORDS: chandan01245,ILIkari7,Kickass-Password
-      LDAP_ROOT: dc=example,dc=com
-    volumes:
-      - ./ldif:/ldifs # You can drop users.ldif here to auto-load it
-      - ldap_data:/bitnami/openldap
-
 volumes:
   postgres_data:
-  ldap_data:

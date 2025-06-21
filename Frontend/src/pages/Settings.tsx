@@ -38,14 +38,24 @@ function Settings() {
   const [verificationError, setVerificationError] = useState("");
 
   // USERS state
-  const [users, setUsers] = useState<{ email: string; password: string }[]>([]);
+  const [users, setUsers] = useState<
+    {
+      email: string;
+      password: string;
+      username?: string;
+      user_group?: string;
+    }[]
+  >([]);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [newUsername, setNewUsername] = useState(""); // New state for username
+  const [newUserGroup, setNewUserGroup] = useState(""); // New state for user group
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [userGroup, setUserGroup] = useState(""); // For admin check
+  const [successMessage, setSuccessMessage] = useState(""); // Success message state
 
   // Get username from localStorage or context
   const [username, setUsername] = useState<string>("");
@@ -86,15 +96,24 @@ function Settings() {
       setUsers([]);
     }
   };
-  
+
   const handleDelete = async (email: string) => {
-    await axios.delete(`http://localhost:5000/api/users/${encodeURIComponent(email)}`);
+    await axios.delete(
+      `http://localhost:5000/api/users/${encodeURIComponent(email)}`
+    );
     fetchUsers();
   };
 
   const handleAddUser = async () => {
     setError("");
-    if (!newEmail || !newPassword || !confirmPassword) {
+    setSuccessMessage("");
+    if (
+      !newEmail ||
+      !newUsername ||
+      !newUserGroup ||
+      !newPassword ||
+      !confirmPassword
+    ) {
       setError("All fields are required.");
       return;
     }
@@ -103,9 +122,17 @@ function Settings() {
       return;
     }
     try {
-      await axios.post("http://localhost:5000/api/users", { email: newEmail, password: newPassword });
-      setAddDialogOpen(false);
+      await axios.post("http://localhost:5000/api/users", {
+        email: newEmail,
+        username: newUsername,
+        user_group: newUserGroup,
+        password: newPassword,
+      });
+      setSuccessMessage("User added successfully!");
+      // Don't close dialog yet, wait for user to see message
       setNewEmail("");
+      setNewUsername("");
+      setNewUserGroup("");
       setNewPassword("");
       setConfirmPassword("");
       fetchUsers();
@@ -199,7 +226,7 @@ function Settings() {
       <Sidebar />
       <div className="flex-1 overflow-auto">
         {/* Only pass the pageTitle or nothing at all */}
-        <Header pageTitle="Settings" /> 
+        <Header />
         <h1 className="text-2xl font-bold mb-6">Settings</h1>
         {/* 2FA Settings */}
         <div className="bg-gray-100 rounded-lg overflow-hidden mb-6">
@@ -274,13 +301,22 @@ function Settings() {
             </button>
             {isUsersOpen && (
               <div className="p-4 border-t border-gray-200">
-                <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 1 }}>
+                <TableContainer
+                  component={Paper}
+                  sx={{ borderRadius: 2, boxShadow: 1 }}
+                >
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell><b>Email</b></TableCell>
-                        <TableCell><b>Password</b></TableCell>
-                        <TableCell align="right"><b>Action</b></TableCell>
+                        <TableCell>
+                          <b>Email</b>
+                        </TableCell>
+                        <TableCell>
+                          <b>Password</b>
+                        </TableCell>
+                        <TableCell align="right">
+                          <b>Action</b>
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -335,12 +371,23 @@ function Settings() {
         )}
 
         {/* Add User Dialog */}
-        <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
+        <Dialog
+          open={addDialogOpen}
+          onClose={() => {
+            setAddDialogOpen(false);
+            setSuccessMessage("");
+            window.location.reload();
+          }}
+        >
           <DialogTitle>
             Add User
             <IconButton
               aria-label="close"
-              onClick={() => setAddDialogOpen(false)}
+              onClick={() => {
+                setAddDialogOpen(false);
+                setSuccessMessage("");
+                window.location.reload();
+              }}
               sx={{
                 position: "absolute",
                 right: 8,
@@ -352,13 +399,26 @@ function Settings() {
             </IconButton>
           </DialogTitle>
           <DialogContent>
-            
             <TextField
               label="User Email"
               fullWidth
               margin="normal"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
+            />
+            <TextField
+              label="Username"
+              fullWidth
+              margin="normal"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+            />
+            <TextField
+              label="User Group"
+              fullWidth
+              margin="normal"
+              value={newUserGroup}
+              onChange={(e) => setNewUserGroup(e.target.value)}
             />
             <TextField
               label="Password"
@@ -376,7 +436,12 @@ function Settings() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
-            {error && (
+            {successMessage && (
+              <Typography color="success.main" sx={{ mt: 1 }}>
+                {successMessage}
+              </Typography>
+            )}
+            {error && !successMessage && (
               <Typography color="error" sx={{ mt: 1 }}>
                 {error}
               </Typography>
@@ -388,8 +453,20 @@ function Settings() {
               variant="contained"
               color="primary"
               sx={{ background: "#1976d2" }}
+              disabled={!!successMessage}
             >
-              OK
+              Add
+            </Button>
+            <Button
+              onClick={() => {
+                setAddDialogOpen(false);
+                setSuccessMessage("");
+                fetchUsers();
+              }}
+              variant="outlined"
+              color="secondary"
+            >
+              Cancel
             </Button>
           </DialogActions>
         </Dialog>
@@ -432,7 +509,11 @@ function Settings() {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseQRDialog}>Cancel</Button>
-            <Button onClick={handleNextStep} variant="contained" color="primary">
+            <Button
+              onClick={handleNextStep}
+              variant="contained"
+              color="primary"
+            >
               Next
             </Button>
           </DialogActions>

@@ -1,8 +1,8 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import "../App.css";
+import GrafanaPanel from "../components/GrafanaPanel";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import GrafanaPanel from '../components/GrafanaPanel';
 
 function Metrics() {
   return (
@@ -17,8 +17,8 @@ function Metrics() {
             <div>
               <h1>Server Metrics</h1>
               <div className="flex gap-4">
-                <GrafanaPanel src="http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&timezone=browser&panelId=2&__feature.dashboardSceneSolo"/>
-                <GrafanaPanel src="http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&timezone=browser&panelId=1&__feature.dashboardSceneSolo"/>
+                <GrafanaPanel src="http://192.168.1.4:3000/d-solo/d9704356-0828-4f5f-b8b8-5285d6239a94/new-dashboard?orgId=1&from=1750523163105&to=1750523463105&timezone=browser&panelId=1&__feature.dashboardSceneSolo" />
+                <GrafanaPanel src="http://192.168.1.4:3000/d-solo/e6e4ea4a-7209-4ade-b961-4d520b79a933/cpu?orgId=1&from=1750519980793&to=1750523580793&timezone=browser&panelId=1&__feature.dashboardSceneSolo" />
               </div>
             </div>
           </div>
