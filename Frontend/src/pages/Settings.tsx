@@ -57,8 +57,6 @@ function Settings() {
   const [userGroup, setUserGroup] = useState(""); // For admin check
   const [successMessage, setSuccessMessage] = useState(""); // Success message state
 
-  // Get username from localStorage or context
-  const [username, setUsername] = useState<string>("");
 
   // Fetch the initial 2FA status and email from the database
   useEffect(() => {
@@ -80,8 +78,6 @@ function Settings() {
     const group = localStorage.getItem("user_group") || "";
     setUserGroup(group);
 
-    const email = localStorage.getItem("userEmail") || "";
-    setUsername(email.split("@")[0]);
   }, []);
 
   // USERS logic

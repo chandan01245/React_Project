@@ -23,7 +23,10 @@ const fetchUserGroup = async (): Promise<string | null> => {
   }
 };
 
-const fetch2FAStatus = async (): Promise<{ is2FARequired: boolean; is2FACompleted: boolean } | null> => {
+const fetch2FAStatus = async (): Promise<{
+  is2FARequired: boolean;
+  is2FACompleted: boolean;
+} | null> => {
   const token = localStorage.getItem("token");
   if (!token) return null;
 
@@ -35,7 +38,7 @@ const fetch2FAStatus = async (): Promise<{ is2FARequired: boolean; is2FAComplete
     });
     return {
       is2FARequired: response.data.is_2fa_enabled,
-      is2FACompleted: response.data['2fa_completed']
+      is2FACompleted: response.data["2fa_completed"],
     };
   } catch (err) {
     console.error("Failed to fetch 2FA status:", err);

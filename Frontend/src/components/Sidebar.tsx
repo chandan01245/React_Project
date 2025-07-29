@@ -39,10 +39,10 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className="w-64 bg-white p-6 h-screen hidden md:flex flex-col justify-between border-r shadow-lg">
+    <div className="w-64 bg-sidebar p-6 h-screen hidden md:flex flex-col justify-between border-r border-sidebar-border shadow-lg">
       {/* Logo */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-10 tracking-tight">
+        <h2 className="text-2xl font-bold text-sidebar-foreground mb-10 tracking-tight">
           <a href="/dashboard">AcceleronLabs</a>
         </h2>
 
@@ -53,9 +53,9 @@ const Sidebar: React.FC = () => {
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-gray-700 hover:bg-gray-100 ${
+                `flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sidebar-foreground hover:bg-sidebar-accent ${
                   isActive
-                    ? "bg-gray-100 border-l-4 border-blue-600 pl-3 text-blue-600"
+                    ? "bg-sidebar-accent border-l-4 border-sidebar-primary pl-3 text-sidebar-primary"
                     : ""
                 }`
               }
@@ -70,7 +70,7 @@ const Sidebar: React.FC = () => {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition duration-200 font-semibold tracking-wide shadow hover:shadow-md"
+        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition duration-200 font-semibold tracking-wide shadow hover:shadow-md"
       >
         <FiLogOut className="text-lg" />
         Logout

@@ -14,7 +14,6 @@ function NotFound() {
 
   const handleGoBackHome = async () => {
     const token = localStorage.getItem("token");
-    const email = localStorage.getItem("email"); // Assuming email is stored in localStorage
 
     if (!token) {
       // Redirect to login if the user is not authenticated

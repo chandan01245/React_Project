@@ -4,7 +4,7 @@ import TwoFA from "./components/2FA";
 import Login from "./components/login";
 
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute"; // Make sure this exists
+import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Disk from "./pages/Disk";
 import Filesystem from "./pages/FileSystem";
@@ -20,14 +20,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route
-          path="/2fa"
-          element={
-            <ProtectedRoute>
-              <TwoFA />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/2fa" element={<TwoFA />} />
         <Route
           path="/dashboard"
           element={

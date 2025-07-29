@@ -1,25 +1,92 @@
 import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
 import "../App.css";
-import GrafanaPanel from "../components/GrafanaPanel";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
+import GrafanaDashboard, {
+  GrafanaPanelConfig,
+} from "../components/GrafanaDashboard";
+import { useGrafanaDashboard } from "../hooks/useGrafanaDashboard";
+import { Button } from "../components/ui/button";
 
 function Metrics() {
+  const initialPanels: GrafanaPanelConfig[] = [
+    {
+      id: "panel-1",
+      title: "Memory Usage",
+      src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=1&__feature.dashboardSceneSolo",
+      layout: { x: 6, y: 3, w: 6, h: 3, minW: 3, minH: 3 },
+    },
+    {
+      id: "panel-2",
+      title: "Network Traffic",
+      src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=2&__feature.dashboardSceneSolo",
+      layout: { x: 0, y: 3, w: 6, h: 3, minW: 3, minH: 3 },
+    },
+    {
+      id: "panel-3",
+      title: "CPU Usage",
+      src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=3&__feature.dashboardSceneSolo",
+      layout: { x: 0, y: 0, w: 6, h: 3, minW: 3, minH: 3 },
+    },
+    {
+      id: "panel-4",
+      title: "File System Availability",
+      src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=4&__feature.dashboardSceneSolo",
+      layout: { x: 6, y: 0, w: 6, h: 3, minW: 3, minH: 3 },
+    },
+  ];
+
+  const {
+    panels,
+    isEditing,
+    handleLayoutChange,
+    toggleEditMode,
+    saveDashboard,
+    loadDashboard,
+  } = useGrafanaDashboard(initialPanels);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
   return (
-    <div className="flex h-screen w-screen bg-white text-black transition-colors duration-300 overflow-hidden">
+    <div className="flex h-screen w-screen bg-background text-foreground transition-colors duration-300 overflow-hidden">
       <Sidebar />
       <div className="flex flex-col flex-1 h-full">
         <Header />
-        <div className="flex-1 overflow-auto p-4">
-          <div>
-            <h1 className="text-2xl font-bold mb-4">Metrics</h1>
-            {/* Render nodes or other dashboard info */}
-            <div>
-              <h1>Server Metrics</h1>
-              <div className="flex gap-4">
-                <GrafanaPanel src="http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753265771682&to=1753266671682&timezone=browser&panelId=2&__feature.dashboardSceneSolo" />
-                <GrafanaPanel src="http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753265771682&to=1753266671682&timezone=browser&panelId=1&__feature.dashboardSceneSolo" />
+        <div className="flex-1 overflow-auto">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-foreground">
+                Server Metrics Dashboard
+              </h1>
+              <div className="flex gap-3">
+                <Button
+                  variant={isEditing ? "destructive" : "secondary"}
+                  onClick={toggleEditMode}
+                  className="px-4"
+                >
+                  {isEditing ? "Cancel Edit" : "Edit Layout"}
+                </Button>
+                {isEditing && (
+                  <Button
+                    variant="default"
+                    onClick={saveDashboard}
+                    className="px-4"
+                  >
+                    Save Layout
+                  </Button>
+                )}
               </div>
+            </div>
+
+            <div className="h-[calc(100vh-200px)]">
+              <GrafanaDashboard
+                panels={panels}
+                onLayoutChange={handleLayoutChange}
+                isEditable={isEditing}
+              />
             </div>
           </div>
           <Outlet />
