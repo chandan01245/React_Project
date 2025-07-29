@@ -4,9 +4,9 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: Dummy_db
+      POSTGRES_DB: kero
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: DBUSER
+      POSTGRES_PASSWORD: ILIkari7
     ports:
       - "5432:5432"
     volumes:
@@ -18,11 +18,11 @@ services:
       dockerfile: Backend/Dockerfile
     environment:
       FLASK_ENV: development
-      DATABASE_URI: postgresql://postgres:DBUSER@db:5432/Dummy_db
-      LDAP_SERVER_IP: 192.168.1.4  
+      DATABASE_URI: postgresql://postgres:ILIkari7@db:5432/kero
+      LDAP_SERVER_IP: 192.168.0.61
       LDAP_BASE_DN: dc=example,dc=com
-      LDAP_USERNAME: Chandan
-      LDAP_ADMIN_PASSWORD: chandan01245
+      LDAP_USERNAME: kaio
+      LDAP_ADMIN_PASSWORD: ILIkari@7
       LDAP_PATH: /home/<DUMMY_USERNAME>/Desktop/users.ldif
     depends_on:
       - db
