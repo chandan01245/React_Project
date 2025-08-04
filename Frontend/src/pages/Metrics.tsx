@@ -40,6 +40,7 @@ function Metrics() {
   const {
     panels,
     isEditing,
+    isLoading,
     handleLayoutChange,
     toggleEditMode,
     saveDashboard,
@@ -73,9 +74,10 @@ function Metrics() {
                   <Button
                     variant="default"
                     onClick={saveDashboard}
+                    disabled={isLoading}
                     className="px-4"
                   >
-                    Save Layout
+                    {isLoading ? "Saving..." : "Save Layout"}
                   </Button>
                 )}
               </div>
