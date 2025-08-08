@@ -16,7 +16,7 @@ from flask_sqlalchemy import SQLAlchemy
 from ldap3 import ALL, MODIFY_REPLACE, SUBTREE, Connection, Server
 from ldap3.core.exceptions import LDAPBindError
 from werkzeug.security import check_password_hash, generate_password_hash
-
+from datetime import datetime
 load_dotenv()
 
 LDAP_SERVER = f'ldap://{os.getenv("LDAP_SERVER_IP")}'
@@ -49,9 +49,29 @@ class User(db.Model):
     username = db.Column(db.String(120), nullable=True)  # Added username field
     password_hash = db.Column(db.Text, nullable=False)
     user_group = db.Column(db.Text, nullable=True)
-    otp_secret = db.Column(db.String(32), nullable=True)
-    is_2fa_enabled = db.Column(db.Boolean, default=False)
-    _2fa_completed = db.Column(db.Boolean, default=False)
+    # TOTP (Google Authenticator / Authy)
+    totp_status = db.Column(
+        db.Enum('enabled', 'disabled', 'reset', name='totp_status_enum'),
+        nullable=False,
+        default='disabled'
+    )
+    totp_secret = db.Column(db.Text, nullable=True)
+
+    # Roles
+    role = db.Column(
+        db.Enum('superadmin', 'admin', 'normal', name='role_enum'),
+        nullable=False,
+        default='normal'
+    )
+
+    # Account status
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=db.func.now())
+    active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Extra 2FA controls
+    otp_secret = db.Column(db.String(32), nullable=True)      # Backup OTP
+    is_2fa_enabled = db.Column(db.Boolean, default=False)     # Overall 2FA switch
+    _2fa_completed = db.Column(db.Boolean, default=False)     # Flag for session state
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -404,23 +424,47 @@ def delete_user(identifier):
     return jsonify({'message': 'User deleted'}), 200
 
 
-users = {
-	"jonathan@example.com": {
-		"pwd": "ILIkari7",
-		"group": "viewer",
-		"username": "jonathan"
-	},
-	"madhu@example.com": {
-		"pwd": "Kickass-Password",
-		"group": "viewer",
-		"username": "madhu"
-	},
-	"chandan@example.com": {
-		"pwd": "Hashed-Password",
-		"group": "admin",
-		"username": "chandan"
-	}
-}
+users = [
+    {
+        "username": "jonathan",
+        "email": "jonathan@example.com",
+        "password_hash": "ILIkari7",  # In production, store a hashed password
+        "totp_status": "disabled",
+        "totp_secret": None,
+        "role": "normal",
+        "created_at": datetime.now(),
+        "active": True,
+        "otp_secret": None,
+        "is_2fa_enabled": False,
+        "_2fa_completed": False
+    },
+    {
+        "username": "madhu",
+        "email": "madhu@example.com",
+        "password_hash": "Kickass-Password",  # In production, hash this
+        "totp_status": "disabled",
+        "totp_secret": None,
+        "role": "normal",
+        "created_at": datetime.now(),
+        "active": True,
+        "otp_secret": None,
+        "is_2fa_enabled": False,
+        "_2fa_completed": False
+    },
+    {
+        "username": "chandan",
+        "email": "chandan@example.com",
+        "password_hash": "Hashed-Password",  # Already hashed
+        "totp_status": "enabled",
+        "totp_secret": "BASE32SECRETEXAMPLE",  # Example TOTP secret
+        "role": "admin",
+        "created_at": datetime.now(),
+        "active": True,
+        "otp_secret": "BACKUP-OTP-CODE",
+        "is_2fa_enabled": True,
+        "_2fa_completed": False
+    }
+]
 
 # driver function
 if __name__ == '__main__':
