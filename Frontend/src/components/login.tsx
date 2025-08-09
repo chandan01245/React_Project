@@ -3,8 +3,8 @@ import { useState } from "react";
 import { FaEye, FaEyeSlash, FaFingerprint } from "react-icons/fa";
 import { MdAlternateEmail } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import logo from "./../assets/logo.png";
-import wallpaper from "./../assets/Wallpaper.png";
+import logo from "../assets/logo.png";
+import wallpaper from "../assets/Wallpaper.png";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -39,28 +39,26 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("/app/login", {
-        email,
-        password
-      },
-      { 
-        withCredentials: true 
-      });
-
-  
+      const response = await axios.post(
+        "/app/login",
+        {
+          email,
+          password,
+        },
+        {
+          withCredentials: true,
+        }
+      );
 
       const user_group = response.data.user_group;
       const twofa_required = response.data["2fa_required"];
-  
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_group", user_group);
 
       if (twofa_required) {
-      
         navigate("/2fa", { state: { email } });
       } else {
-   
         navigate("/dashboard");
       }
     } catch (err) {

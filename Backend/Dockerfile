@@ -1,13 +1,10 @@
 # Use an official Python image
-FROM python:3.12
+FROM python:3.12-slim
 
-# Install system packages required for python-ldap
-RUN apt-get update && apt-get install -y \
-    libsasl2-dev \
-    libldap2-dev \
-    libssl-dev \
-    gcc \
-    python3-dev \
+# Install minimal build/runtime deps for psycopg2-binary (none) and runtime utils
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -17,11 +14,14 @@ WORKDIR /app
 COPY Backend/ ./
 
 # Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
 
 # Expose port 5000 for Flask
 EXPOSE 5000
 
-# Command to run the Flask app
-CMD ["python", "app.py"]
+# Default to production server; override in dev via compose
+ENV PYTHONUNBUFFERED=1
+RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
