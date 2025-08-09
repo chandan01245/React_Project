@@ -4,8 +4,6 @@ import io
 import os
 
 import jwt
-import ldap
-import ldap.modlist as modlist
 import pyotp
 import qrcode
 from dotenv import load_dotenv
@@ -13,20 +11,16 @@ from flask import (Flask, jsonify, make_response, redirect,
                    render_template_string, request, session)
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from ldap3 import ALL, MODIFY_REPLACE, SUBTREE, Connection, Server
-from ldap3.core.exceptions import LDAPBindError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
-LDAP_SERVER = f'ldap://{os.getenv("LDAP_SERVER_IP")}'
-LDAP_BASE_DN = 'dc=example,dc=com'
-LDAP_ADMIN_PASSWORD = os.getenv("LDAP_ADMIN_PASSWORD")
 
 # --- Flask App Setup ---
 app = Flask(__name__)
 
-app.secret_key = 'supersecretkey'
+# Use environment-provided secrets; fall back to unsafe defaults for local dev only
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'change-me-in-prod')
 CORS(app, resources={
 	r"/*": {
 		"origins": ["http://127.0.0.1:5173", "http://localhost:5173"],
@@ -35,7 +29,8 @@ CORS(app, resources={
 		"allow_headers": ["Content-Type", "Authorization"]
 	}
 })
-SECRET_KEY = 'Hashed-Password'
+# JWT signing key
+SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'change-me-jwt-in-prod')
 # PostgreSQL database config (adjust this!)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URI")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -72,6 +67,14 @@ def generate_token(user):
     }
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
+# Ensure tables exist on startup (container may restart until DB is ready)
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception:
+        # Avoid crashing on import logs; container orchestration will retry
+        pass
+
 # --- Routes ---
 # returns "API Works" when we use GET.
 @app.route('/app/login', methods=['POST'])
@@ -87,66 +90,26 @@ def input_form():
 
     # Try to find user by email or username
     user = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
-    if not user:
-        print("[ERROR] User not found in local DB.")
-        return jsonify({'error': 'User metadata not found'}), 404
 
-    # Find email for LDAP search
-    email = user.email
-    try:
-        server = Server(LDAP_SERVER, get_info=ALL)
-        conn = Connection(server, auto_bind=True)
+    if not user or not user.check_password(password):
+        print("[ERROR] Invalid username or password.")
+        return jsonify({'error': 'Invalid username or password'}), 401
 
-        # Search for DN using mail
-        print(f"[DEBUG] Searching for user with mail={email}")
-        conn.search(
-            search_base=LDAP_BASE_DN,
-            search_filter=f"(mail={email})",
-            search_scope=SUBTREE,
-            attributes=[]
-        )
+    print(f"[DEBUG] DB authentication successful for {user.email}")
 
-        if not conn.entries:
-            print(f"[ERROR] No user found for email: {email}")
-            return jsonify({'error': 'User not found in LDAP'}), 404
+    token = generate_token(user)
+    session['user'] = user.email
+    session['role'] = user.user_group
 
-        user_dn = conn.entries[0].entry_dn
-        print(f"[DEBUG] Found user DN: {user_dn}")
-
-        # Bind with DN and password
-        conn = Connection(server, user=user_dn, password=password)
-        print("[DEBUG] Attempting LDAP bind...")
-        if not conn.bind():
-            print(f"[ERROR] LDAP bind failed. Result: {conn.result}")
-            return jsonify({'error': 'Invalid credentials'}), 401
-
-        print(f"[DEBUG] LDAP bind successful for {user_dn}")
-
-        # Extract OU from DN (e.g., ou=admin,...)
-        user_ou = next((rdn.split('=')[1] for rdn in user_dn.split(',') if rdn.lower().startswith('ou=')), None)
-        print(f"[DEBUG] Extracted OU: {user_ou}")
-
-        token = generate_token(user)
-        session['user'] = email
-        session['role'] = user_ou
-
-        return jsonify({
-            'message': 'Login successful',
-            'user': email,
-            'username': user.username,
-            'role': user_ou,
-            'token': token,
-            '2fa_required': user.is_2fa_enabled,
-            'user_id': user.id
-        }), 200
-
-    except LDAPBindError as e:
-        print(f"[ERROR] LDAP bind error: {str(e)}")
-        return jsonify({'error': 'LDAP bind failed'}), 401
-
-    except Exception as e:
-        print(f"[ERROR] LDAP connection exception: {str(e)}")
-        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
+    return jsonify({
+        'message': 'Login successful',
+        'user': user.email,
+        'username': user.username,
+        'role': user.user_group,
+        'token': token,
+        '2fa_required': user.is_2fa_enabled,
+        'user_id': user.id
+    }), 200
 
 
 @app.route('/protected')
@@ -332,42 +295,6 @@ def add_user():
         traceback.print_exc()
         return jsonify({'error': f'Database error: {str(e)}'}), 500
 
-    # Add to LDAP
-    ldap_host = os.getenv("LDAP_SERVER_IP")
-    admin_dn = os.getenv("LDAP_USERNAME")
-    admin_pw = os.getenv("LDAP_ADMIN_PASSWORD")
-    base_dn = os.getenv("LDAP_BASE_DN")
-
-    user_dn = f"uid={username},ou={user_group},{base_dn}"
-    print(f"[DEBUG] Attempting to add LDAP user with DN: {user_dn}")
-    print(f"[DEBUG] user_group: '{user_group}', username: '{username}', base_dn: '{base_dn}'")
-    user_attrs = {
-        'objectClass': [b'top', b'inetOrgPerson'],
-        'cn': [username.encode()],
-        'sn': [username.encode()],
-        'mail': [email.encode()],
-        'userPassword': [password.encode()]
-    }
-    print(f"[DEBUG] user_attrs: {user_attrs}")
-
-    ldif = modlist.addModlist(user_attrs)
-
-    try:
-        conn = ldap.initialize(f"ldap://{ldap_host}")
-        conn.simple_bind_s(admin_dn, admin_pw)
-        conn.add_s(user_dn, ldif)
-        conn.unbind_s()
-    except ldap.ALREADY_EXISTS:
-        db.session.delete(user)
-        db.session.commit()
-        return jsonify({'error': 'User already exists in LDAP'}), 409
-    except ldap.LDAPError as e:
-        db.session.delete(user)
-        db.session.commit()
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'LDAP error: {str(e)}'}), 500
-
     return jsonify({'message': 'User added'}), 201
 
 @app.route('/api/users/<path:identifier>', methods=['DELETE'])
@@ -376,30 +303,9 @@ def delete_user(identifier):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    email = user.email
-    username = email.split('@')[0]
-    user_group = user.user_group or 'viewer'
-    base_dn = os.getenv("LDAP_BASE_DN")
-    user_dn = f"uid={username},ou={user_group},{base_dn}"
-
     # Remove from local DB
     db.session.delete(user)
     db.session.commit()
-
-    # Remove from LDAP
-    ldap_host = os.getenv("LDAP_SERVER_IP")
-    admin_dn = os.getenv("LDAP_USERNAME")
-    admin_pw = os.getenv("LDAP_ADMIN_PASSWORD")
-
-    try:
-        conn = ldap.initialize(f"ldap://{ldap_host}")
-        conn.simple_bind_s(admin_dn, admin_pw)
-        conn.delete_s(user_dn)
-        conn.unbind_s()
-    except ldap.NO_SUCH_OBJECT:
-        return jsonify({'error': 'User not found in LDAP'}), 404
-    except ldap.LDAPError as e:
-        return jsonify({'error': f'LDAP deletion error: {str(e)}'}), 500
 
     return jsonify({'message': 'User deleted'}), 200
 

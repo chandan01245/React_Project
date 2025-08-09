@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   db:
     image: postgres:17
@@ -19,17 +17,13 @@ services:
     environment:
       FLASK_ENV: development
       DATABASE_URI: postgresql://postgres:ILIkari7@db:5432/kero
-      LDAP_SERVER_IP: 192.168.0.61
-      LDAP_BASE_DN: dc=example,dc=com
-      LDAP_USERNAME: kaio
-      LDAP_ADMIN_PASSWORD: ILIkari@7
-      LDAP_PATH: /home/<DUMMY_USERNAME>/Desktop/users.ldif
+      FLASK_SECRET_KEY: change-me-in-dev
+      JWT_SECRET_KEY: change-me-in-dev
     depends_on:
       - db
     ports:
       - "5000:5000"
-    volumes:
-      - ./ldif:/ldifs
+    restart: unless-stopped
 
   frontend:
     build:

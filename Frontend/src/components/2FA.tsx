@@ -9,7 +9,7 @@ import {
 import axios, { AxiosError } from "axios";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import wallpaper from "./../assets/Wallpaper.png";
+import wallpaper from "../assets/Wallpaper.png";
 
 function TwoFA() {
   const location = useLocation();
