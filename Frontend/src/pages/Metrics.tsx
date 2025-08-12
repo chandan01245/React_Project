@@ -7,6 +7,7 @@ import GrafanaDashboard, {
   GrafanaPanelConfig,
 } from "../components/GrafanaDashboard";
 import { useGrafanaDashboard } from "../hooks/useGrafanaDashboard";
+import { useDashboardContext } from "../contexts/DashboardContext";
 import { Button } from "../components/ui/button";
 
 function Metrics() {
@@ -39,13 +40,19 @@ function Metrics() {
 
   const {
     panels,
+    pinnedPanels,
     isEditing,
     isLoading,
     handleLayoutChange,
     toggleEditMode,
+    pinPanel,
+    unpinPanel,
     saveDashboard,
     loadDashboard,
   } = useGrafanaDashboard(initialPanels);
+
+  // Get the shared dashboard context
+  const { refreshPinnedPanels } = useDashboardContext();
 
   useEffect(() => {
     loadDashboard();
@@ -59,6 +66,23 @@ function Metrics() {
   const handleSaveError = (error: any) => {
     // Show error message or notification
     console.error("Failed to save dashboard layout:", error);
+  };
+
+  const isPanelPinned = (panelId: string) => {
+    return pinnedPanels.some((panel) => panel.id === panelId);
+  };
+
+  // Enhanced pin/unpin handlers that update the shared context
+  const handlePinPanel = async (panel: GrafanaPanelConfig) => {
+    await pinPanel(panel);
+    // Refresh the shared context to update other components
+    await refreshPinnedPanels();
+  };
+
+  const handleUnpinPanel = async (panel: GrafanaPanelConfig) => {
+    await unpinPanel(panel);
+    // Refresh the shared context to update other components
+    await refreshPinnedPanels();
   };
 
   return (
@@ -103,8 +127,12 @@ function Metrics() {
             <div className="h-[calc(100vh-200px)]">
               <GrafanaDashboard
                 panels={panels}
+                pinnedPanels={pinnedPanels}
                 onLayoutChange={handleLayoutChange}
                 isEditable={isEditing}
+                onPinPanel={handlePinPanel}
+                onUnpinPanel={handleUnpinPanel}
+                showPinIcons={true}
               />
             </div>
           </div>

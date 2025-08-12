@@ -4,6 +4,7 @@ import { GrafanaPanelConfig } from '../components/GrafanaDashboard';
 
 export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) => {
   const [panels, setPanels] = useState<GrafanaPanelConfig[]>(initialPanels);
+  const [pinnedPanels, setPinnedPanels] = useState<GrafanaPanelConfig[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -45,6 +46,66 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
     setIsEditing(prev => !prev);
   }, []);
 
+  const pinPanel = useCallback(async (panel: GrafanaPanelConfig) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      console.log('Pinning panel:', panel);
+      const response = await axios.post('/app/dashboard/pin', {
+        panel: panel,
+        action: 'pin'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Pin response:', response.data);
+      if (response.data.pinned_panels) {
+        setPinnedPanels(response.data.pinned_panels);
+        console.log('Updated pinned panels:', response.data.pinned_panels);
+      }
+      console.log('Panel pinned successfully');
+    } catch (error) {
+      console.error('Failed to pin panel:', error);
+    }
+  }, []);
+
+  const unpinPanel = useCallback(async (panel: GrafanaPanelConfig) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      console.log('Unpinning panel:', panel);
+      const response = await axios.post('/app/dashboard/pin', {
+        panel: panel,
+        action: 'unpin'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Unpin response:', response.data);
+      if (response.data.pinned_panels) {
+        setPinnedPanels(response.data.pinned_panels);
+        console.log('Updated pinned panels:', response.data.pinned_panels);
+      }
+      console.log('Panel unpinned successfully');
+    } catch (error) {
+      console.error('Failed to unpin panel:', error);
+    }
+  }, []);
+
   const saveDashboard = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -54,7 +115,8 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
       }
 
       await axios.post('/app/dashboard', {
-        panels: panels
+        panels: panels,
+        pinned_panels: pinnedPanels
       }, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -73,7 +135,7 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
     } finally {
       setIsLoading(false);
     }
-  }, [panels]);
+  }, [panels, pinnedPanels]);
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true);
@@ -90,9 +152,17 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
         }
       });
 
+      console.log('Dashboard load response:', response.data);
+
       if (response.data.panels && response.data.panels.length > 0) {
         setPanels(response.data.panels);
       }
+      
+      // Always set pinned panels, even if empty
+      const pinnedPanelsData = response.data.pinned_panels || [];
+      setPinnedPanels(pinnedPanelsData);
+      console.log('Set pinned panels:', pinnedPanelsData);
+      
     } catch (error) {
       console.error('Failed to load dashboard from API:', error);
       // Don't fallback to localStorage - just log the error
@@ -104,6 +174,7 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
 
   return {
     panels,
+    pinnedPanels,
     isEditing,
     isLoading,
     addPanel,
@@ -111,6 +182,8 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
     updatePanel,
     handleLayoutChange,
     toggleEditMode,
+    pinPanel,
+    unpinPanel,
     saveDashboard,
     loadDashboard,
   };
