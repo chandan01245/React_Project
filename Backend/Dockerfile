@@ -17,6 +17,13 @@ COPY Backend/ ./
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
+# Make startup script executable
+RUN chmod +x startup.py
+
+# Create a startup shell script
+RUN echo '#!/bin/bash\npython startup.py\nexec gunicorn --bind 0.0.0.0:5000 app:app' > start.sh && \
+    chmod +x start.sh
+
 # Expose port 5000 for Flask
 EXPOSE 5000
 
@@ -24,4 +31,6 @@ EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
 RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /app
 USER appuser
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+
+# Use startup shell script
+CMD ["./start.sh"]

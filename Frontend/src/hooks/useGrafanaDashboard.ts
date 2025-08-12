@@ -50,8 +50,7 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.error('No authentication token found');
-        return;
+        throw new Error('No authentication token found');
       }
 
       await axios.post('/app/dashboard', {
@@ -67,9 +66,10 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
       console.log('Dashboard saved successfully');
     } catch (error) {
       console.error('Failed to save dashboard:', error);
-      // Fallback to localStorage if API fails
-      localStorage.setItem('grafana-dashboard', JSON.stringify(panels));
-      setIsEditing(false);
+      // Don't fallback to localStorage - keep editing mode on for user to retry
+      setIsEditing(true);
+      // Re-throw the error so the calling component can handle it
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -95,16 +95,8 @@ export const useGrafanaDashboard = (initialPanels: GrafanaPanelConfig[] = []) =>
       }
     } catch (error) {
       console.error('Failed to load dashboard from API:', error);
-      // Fallback to localStorage if API fails
-      const saved = localStorage.getItem('grafana-dashboard');
-      if (saved) {
-        try {
-          const loadedPanels = JSON.parse(saved);
-          setPanels(loadedPanels);
-        } catch (parseError) {
-          console.error('Failed to parse localStorage dashboard:', parseError);
-        }
-      }
+      // Don't fallback to localStorage - just log the error
+      // The user will see the initial panels defined in the component
     } finally {
       setIsLoading(false);
     }

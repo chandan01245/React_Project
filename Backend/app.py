@@ -2,6 +2,7 @@ import base64
 import datetime
 import io
 import os
+import json
 
 import jwt
 import pyotp
@@ -59,6 +60,17 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+# --- Dashboard Model ---
+class Dashboard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    panels = db.Column(db.Text, nullable=False)  # JSON string of panel configurations
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('dashboards', lazy=True))
 
 def generate_token(user):
     payload = {
@@ -308,6 +320,93 @@ def delete_user(identifier):
     db.session.commit()
 
     return jsonify({'message': 'User deleted'}), 200
+
+# --- Dashboard Routes ---
+@app.route('/app/dashboard', methods=['GET'])
+def get_dashboard():
+    """Get the current user's dashboard configuration"""
+    token = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(" ")[1]
+
+    if not token:
+        return jsonify({'error': 'Token is missing!'}), 401
+
+    try:
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = decoded['user_id']
+        
+        # Get user's dashboard
+        dashboard = Dashboard.query.filter_by(user_id=user_id).first()
+        
+        if dashboard:
+            return jsonify({
+                'panels': json.loads(dashboard.panels),
+                'created_at': dashboard.created_at.isoformat(),
+                'updated_at': dashboard.updated_at.isoformat()
+            }), 200
+        else:
+            # Return empty dashboard if none exists
+            return jsonify({'panels': []}), 200
+            
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token has expired!'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token!'}), 401
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@app.route('/app/dashboard', methods=['POST'])
+def save_dashboard():
+    """Save the current user's dashboard configuration"""
+    token = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(" ")[1]
+
+    if not token:
+        return jsonify({'error': 'Token is missing!'}), 401
+
+    try:
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = decoded['user_id']
+        
+        data = request.get_json()
+        if not data or 'panels' not in data:
+            return jsonify({'error': 'Panels data is required'}), 400
+        
+        panels = data['panels']
+        
+        # Check if dashboard exists for this user
+        dashboard = Dashboard.query.filter_by(user_id=user_id).first()
+        
+        if dashboard:
+            # Update existing dashboard
+            dashboard.panels = json.dumps(panels)
+            dashboard.updated_at = datetime.datetime.now(datetime.UTC)
+        else:
+            # Create new dashboard
+            dashboard = Dashboard(
+                user_id=user_id,
+                panels=json.dumps(panels)
+            )
+            db.session.add(dashboard)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Dashboard saved successfully',
+            'panels': panels
+        }), 200
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token has expired!'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token!'}), 401
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
 users = {

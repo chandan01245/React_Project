@@ -15,25 +15,25 @@ function Metrics() {
       id: "panel-1",
       title: "Memory Usage",
       src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=1&__feature.dashboardSceneSolo",
-      layout: { x: 6, y: 3, w: 6, h: 3, minW: 3, minH: 3 },
+      layout: { x: 0, y: 0, w: 6, h: 3, minW: 3, minH: 3 },
     },
     {
       id: "panel-2",
       title: "Network Traffic",
       src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=2&__feature.dashboardSceneSolo",
-      layout: { x: 0, y: 3, w: 6, h: 3, minW: 3, minH: 3 },
+      layout: { x: 6, y: 0, w: 6, h: 3, minW: 3, minH: 3 },
     },
     {
       id: "panel-3",
       title: "CPU Usage",
       src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=3&__feature.dashboardSceneSolo",
-      layout: { x: 0, y: 0, w: 6, h: 3, minW: 3, minH: 3 },
+      layout: { x: 0, y: 3, w: 6, h: 3, minW: 3, minH: 3 },
     },
     {
       id: "panel-4",
       title: "File System Availability",
       src: "http://192.168.0.192:3000/d-solo/3f6b9486-3d2a-48a1-94eb-36c1dc48bd0d/testing-dashboard?orgId=1&from=1753823300008&to=1753824200008&timezone=browser&tab=queries&panelId=4&__feature.dashboardSceneSolo",
-      layout: { x: 6, y: 0, w: 6, h: 3, minW: 3, minH: 3 },
+      layout: { x: 6, y: 3, w: 6, h: 3, minW: 3, minH: 3 },
     },
   ];
 
@@ -50,6 +50,16 @@ function Metrics() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  const handleSaveSuccess = () => {
+    // Show success message or notification
+    console.log("Dashboard layout saved successfully!");
+  };
+
+  const handleSaveError = (error: any) => {
+    // Show error message or notification
+    console.error("Failed to save dashboard layout:", error);
+  };
 
   return (
     <div className="flex h-screen w-screen bg-background text-foreground transition-colors duration-300 overflow-hidden">
@@ -73,7 +83,14 @@ function Metrics() {
                 {isEditing && (
                   <Button
                     variant="default"
-                    onClick={saveDashboard}
+                    onClick={async () => {
+                      try {
+                        await saveDashboard();
+                        handleSaveSuccess();
+                      } catch (error) {
+                        handleSaveError(error);
+                      }
+                    }}
                     disabled={isLoading}
                     className="px-4"
                   >
