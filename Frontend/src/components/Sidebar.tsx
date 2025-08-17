@@ -5,10 +5,11 @@ import {
   FiFolder,
   FiGlobe,
   FiHardDrive,
-  FiLogOut,
-  FiSettings,
   FiHome,
-  FiMonitor
+  FiLink,
+  FiLogOut,
+  FiMonitor,
+  FiSettings,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -27,6 +28,7 @@ const Sidebar: React.FC = () => {
     { name: "Storage", path: "/storage", icon: <FiDatabase /> },
     { name: "Network", path: "/network", icon: <FiGlobe /> },
     { name: "File System", path: "/filesystem", icon: <FiFolder /> },
+    { name: "Connections", path: "/connections", icon: <FiLink /> },
     { name: "Settings", path: "/settings", icon: <FiSettings /> },
   ];
 

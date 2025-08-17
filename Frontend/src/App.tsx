@@ -5,6 +5,7 @@ import Login from "./components/login";
 
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Connections from "./pages/Connections";
 import Dashboard from "./pages/Dashboard";
 import Disk from "./pages/Disk";
 import Filesystem from "./pages/FileSystem";
@@ -82,6 +83,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/connections"
+          element={
+            <ProtectedRoute>
+              <Connections />
             </ProtectedRoute>
           }
         />

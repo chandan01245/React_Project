@@ -1,7 +1,10 @@
 import base64
 import datetime
 import io
+import json
 import os
+import shlex
+import subprocess
 
 import jwt
 import pyotp
@@ -22,12 +25,17 @@ app = Flask(__name__)
 # Use environment-provided secrets; fall back to unsafe defaults for local dev only
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'change-me-in-prod')
 CORS(app, resources={
-	r"/*": {
-		"origins": ["http://127.0.0.1:5173", "http://localhost:5173"],
-		"supports_credentials": True,
-		"methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-		"allow_headers": ["Content-Type", "Authorization"]
-	}
+    r"/*": {
+        "origins": [
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+            "http://127.0.0.1:8080",
+            "http://localhost:8080",
+        ],
+        "supports_credentials": True,
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
 })
 # JWT signing key
 SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'change-me-jwt-in-prod')
@@ -41,7 +49,7 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    username = db.Column(db.String(120), nullable=True)  # Added username field
+    username = db.Column(db.String(120), nullable=True)
     password_hash = db.Column(db.Text, nullable=False)
     user_group = db.Column(db.Text, nullable=True)
     otp_secret = db.Column(db.String(32), nullable=True)
@@ -75,27 +83,23 @@ with app.app_context():
         # Avoid crashing on import logs; container orchestration will retry
         pass
 
-# --- Routes ---
-# returns "API Works" when we use GET.
+"""
+ORIGINAL LOGIN ROUTE (DB-auth only)
+"""
+
 @app.route('/app/login', methods=['POST'])
 def input_form():
     data = request.get_json()
-    identifier = data.get("email")  # can be email or username
+    identifier = data.get("email")
     password = data.get("password")
-
-    print(f"[DEBUG] Received login request - Identifier: {identifier}")
 
     if not identifier or not password:
         return jsonify({'error': 'Email/Username and password are required'}), 400
 
-    # Try to find user by email or username
     user = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
 
     if not user or not user.check_password(password):
-        print("[ERROR] Invalid username or password.")
         return jsonify({'error': 'Invalid username or password'}), 401
-
-    print(f"[DEBUG] DB authentication successful for {user.email}")
 
     token = generate_token(user)
     session['user'] = user.email
@@ -110,6 +114,41 @@ def input_form():
         '2fa_required': user.is_2fa_enabled,
         'user_id': user.id
     }), 200
+
+"""
+NEW: API ROUTE FOR REMOTE FILE LISTING VIA SSH
+"""
+
+@app.route('/api/list-ldap-server-files', methods=['GET'])
+def list_ldap_server_files():
+    # Configuration for the remote server
+    # !!! IMPORTANT: Replace with your actual LDAP Server IP and username !!!
+    LDAP_SERVER_IP = "IPHERE"
+    LDAP_SERVER_USER = "user_on_ldap_server"
+
+    # Command to execute on the remote server
+    command_to_run = "ls -la /home"  # Example: list contents of /home
+
+    try:
+        ssh_command = [
+            "ssh",
+            "-o", "StrictHostKeyChecking=no",  # Bypasses host key verification
+            f"{LDAP_SERVER_USER}@{LDAP_SERVER_IP}",
+            command_to_run
+        ]
+
+        result = subprocess.run(
+            ssh_command,
+            capture_output=True,
+            text=True,
+            check=True,  # Raise an error if SSH fails
+            timeout=15
+        )
+        return jsonify({'status': 'success', 'files': result.stdout.splitlines()})
+    except subprocess.CalledProcessError as e:
+        return jsonify({'status': 'error', 'message': f"Command failed on remote server: {e.stderr}"}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/protected')
@@ -330,21 +369,21 @@ users = {
 
 # driver function
 if __name__ == '__main__':
-    # with app.app_context():
-    #     db.create_all()
-    #     print("Created Users")
-    #     for email in users:
-    #         user = User(email=email)
-    #         print("Created User")
-    #         user.set_password(users[email]["pwd"])
-    #         print("Set Password")
-    #         user.set_user_group(users[email]["group"])
-    #         print("Set Group")
-    #         user.set_username(users[email]["username"])
-    #         print("Set Username")
-    #         user._2fa_completed = False  # Initialize 2FA completion status
-    #         db.session.add(user)
-    #         print("Added User to Session")
-    #     db.session.commit()
-    #     print("Committed Session")
+    with app.app_context():
+        db.create_all()
+        print("Created Users")
+        for email in users:
+            user = User(email=email)
+            print("Created User")
+            user.set_password(users[email]["pwd"])
+            print("Set Password")
+            user.set_user_group(users[email]["group"])
+            print("Set Group")
+            user.set_username(users[email]["username"])
+            print("Set Username")
+            user._2fa_completed = False  # Initialize 2FA completion status
+            db.session.add(user)
+            print("Added User to Session")
+        db.session.commit()
+        print("Committed Session")
     app.run(host='0.0.0.0', port=5000, debug=True)
