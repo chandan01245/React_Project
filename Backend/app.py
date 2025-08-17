@@ -68,6 +68,18 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+# --- Dashboard Model ---
+class Dashboard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    panels = db.Column(db.Text, nullable=False)  # JSON string of panel configurations
+    pinned_panels = db.Column(db.Text, nullable=True)  # JSON string of pinned panel configurations
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('dashboards', lazy=True))
+
 def generate_token(user):
     payload = {
         'user_id': user.id,
@@ -347,6 +359,161 @@ def delete_user(identifier):
     db.session.commit()
 
     return jsonify({'message': 'User deleted'}), 200
+
+# --- Dashboard Routes ---
+@app.route('/app/dashboard', methods=['GET'])
+def get_dashboard():
+    """Get the current user's dashboard configuration"""
+    token = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(" ")[1]
+
+    if not token:
+        return jsonify({'error': 'Token is missing!'}), 401
+
+    try:
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = decoded['user_id']
+        
+        # Get user's dashboard
+        dashboard = Dashboard.query.filter_by(user_id=user_id).first()
+        
+        if dashboard:
+            return jsonify({
+                'panels': json.loads(dashboard.panels),
+                'pinned_panels': json.loads(dashboard.pinned_panels) if dashboard.pinned_panels else [],
+                'created_at': dashboard.created_at.isoformat(),
+                'updated_at': dashboard.updated_at.isoformat()
+            }), 200
+        else:
+            # Return empty dashboard if none exists
+            return jsonify({'panels': [], 'pinned_panels': []}), 200
+            
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token has expired!'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token!'}), 401
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@app.route('/app/dashboard', methods=['POST'])
+def save_dashboard():
+    """Save the current user's dashboard configuration"""
+    token = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(" ")[1]
+
+    if not token:
+        return jsonify({'error': 'Token is missing!'}), 401
+
+    try:
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = decoded['user_id']
+        
+        data = request.get_json()
+        if not data or 'panels' not in data:
+            return jsonify({'error': 'Panels data is required'}), 400
+        
+        panels = data['panels']
+        pinned_panels = data.get('pinned_panels', []) # Get pinned panels from request
+        
+        # Check if dashboard exists for this user
+        dashboard = Dashboard.query.filter_by(user_id=user_id).first()
+        
+        if dashboard:
+            # Update existing dashboard
+            dashboard.panels = json.dumps(panels)
+            dashboard.pinned_panels = json.dumps(pinned_panels) # Update pinned panels
+            dashboard.updated_at = datetime.datetime.now(datetime.UTC)
+        else:
+            # Create new dashboard
+            dashboard = Dashboard(
+                user_id=user_id,
+                panels=json.dumps(panels),
+                pinned_panels=json.dumps(pinned_panels) # Initialize pinned panels
+            )
+            db.session.add(dashboard)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Dashboard saved successfully',
+            'panels': panels,
+            'pinned_panels': pinned_panels
+        }), 200
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token has expired!'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token!'}), 401
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@app.route('/app/dashboard/pin', methods=['POST'])
+def pin_panel():
+    """Pin or unpin a panel to/from dashboard"""
+    token = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(" ")[1]
+
+    if not token:
+        return jsonify({'error': 'Token is missing!'}), 401
+
+    try:
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = decoded['user_id']
+        
+        data = request.get_json()
+        if not data or 'panel' not in data or 'action' not in data:
+            return jsonify({'error': 'Panel data and action are required'}), 400
+        
+        panel = data['panel']
+        action = data['action']  # 'pin' or 'unpin'
+        
+        # Get user's dashboard
+        dashboard = Dashboard.query.filter_by(user_id=user_id).first()
+        
+        if not dashboard:
+            return jsonify({'error': 'Dashboard not found'}), 404
+        
+        # Get current pinned panels
+        current_pinned = json.loads(dashboard.pinned_panels) if dashboard.pinned_panels else []
+        
+        if action == 'pin':
+            # Check if panel is already pinned
+            if not any(p['id'] == panel['id'] for p in current_pinned):
+                current_pinned.append(panel)
+                message = 'Panel pinned successfully'
+            else:
+                return jsonify({'error': 'Panel is already pinned'}), 400
+        elif action == 'unpin':
+            # Remove panel from pinned list
+            current_pinned = [p for p in current_pinned if p['id'] != panel['id']]
+            message = 'Panel unpinned successfully'
+        else:
+            return jsonify({'error': 'Invalid action. Use "pin" or "unpin"'}), 400
+        
+        # Update dashboard
+        dashboard.pinned_panels = json.dumps(current_pinned)
+        dashboard.updated_at = datetime.datetime.now(datetime.UTC)
+        db.session.commit()
+        
+        return jsonify({
+            'message': message,
+            'pinned_panels': current_pinned
+        }), 200
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token has expired!'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token!'}), 401
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
 users = {

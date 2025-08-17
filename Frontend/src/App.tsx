@@ -15,6 +15,7 @@ import Node from "./pages/Node";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Storage from "./pages/Storage";
+import { DashboardProvider } from "./contexts/DashboardContext";
 
 function App() {
   return (
