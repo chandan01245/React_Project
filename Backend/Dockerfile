@@ -22,7 +22,7 @@ RUN pip install --upgrade pip && \
 RUN chmod +x startup.py
 
 # Create a startup shell script
-RUN echo '#!/bin/bash\npython startup.py\nexec gunicorn --bind 0.0.0.0:5000 app:app' > start.sh && \
+RUN echo '#!/bin/bash\nset -e\npython -c "from app import seed_database; seed_database()"\npython startup.py\nexec gunicorn --bind 0.0.0.0:5000 app:app' > start.sh && \
     chmod +x start.sh
 
 # Expose port 5000 for Flask
