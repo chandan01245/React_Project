@@ -21,6 +21,7 @@ load_dotenv()
 
 # --- Flask App Setup ---
 app = Flask(__name__)
+db = SQLAlchemy(app)
 
 # Use environment-provided secrets; fall back to unsafe defaults for local dev only
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'change-me-in-prod')
@@ -516,41 +517,32 @@ def pin_panel():
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
-users = {
-	"jonathan@example.com": {
-		"pwd": "ILIkari7",
-		"group": "viewer",
-		"username": "jonathan"
-	},
-	"madhu@example.com": {
-		"pwd": "Kickass-Password",
-		"group": "viewer",
-		"username": "madhu"
-	},
-	"chandan@example.com": {
-		"pwd": "Hashed-Password",
-		"group": "admin",
-		"username": "chandan"
-	}
-}
+def seed_database():
+    """Create tables and seed default users exactly once."""
+    with app.app_context():
+        db.create_all()
+        if User.query.first():
+            print("[seed] Users already exist; skipping.")
+            return
+
+        users = {
+            "jonathan@example.com": {"pwd": "ILIkari7", "group": "viewer", "username": "jonathan"},
+            "madhu@example.com": {"pwd": "Kickass-Password", "group": "viewer", "username": "madhu"},
+            "chandan@example.com": {"pwd": "Hashed-Password", "group": "admin", "username": "chandan"},
+        }
+
+        for email, data in users.items():
+            u = User(email=email)
+            u.set_password(data["pwd"])
+            u.set_user_group(data["group"])
+            u.set_username(data["username"])
+            u._2fa_completed = False
+            db.session.add(u)
+
+        db.session.commit()
+        print("[seed] Seeded default users successfully.")
 
 # driver function
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        print("Created Users")
-        for email in users:
-            user = User(email=email)
-            print("Created User")
-            user.set_password(users[email]["pwd"])
-            print("Set Password")
-            user.set_user_group(users[email]["group"])
-            print("Set Group")
-            user.set_username(users[email]["username"])
-            print("Set Username")
-            user._2fa_completed = False  # Initialize 2FA completion status
-            db.session.add(user)
-            print("Added User to Session")
-        db.session.commit()
-        print("Committed Session")
+    seed_database()
     app.run(host='0.0.0.0', port=5000, debug=True)
