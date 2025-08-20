@@ -14,13 +14,10 @@ services:
     build:
       context: .
       dockerfile: Backend/Dockerfile
-    environment:
-      FLASK_ENV: development
-      DATABASE_URI: postgresql://postgres:DBUSER@db:5432/Dummy_db
-      FLASK_SECRET_KEY: change-me-in-dev
-      JWT_SECRET_KEY: change-me-in-dev
     depends_on:
       - db
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     restart: unless-stopped

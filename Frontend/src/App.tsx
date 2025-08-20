@@ -5,6 +5,7 @@ import Login from "./components/login";
 
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { DashboardProvider } from "./contexts/DashboardContext";
 import Connections from "./pages/Connections";
 import Dashboard from "./pages/Dashboard";
 import Disk from "./pages/Disk";
@@ -15,12 +16,12 @@ import Node from "./pages/Node";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Storage from "./pages/Storage";
-import { DashboardProvider } from "./contexts/DashboardContext";
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <DashboardProvider>
+      <Router>
+        <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/2fa" element={<TwoFA />} />
         <Route
@@ -95,9 +96,10 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+    </DashboardProvider>
   );
 }
 

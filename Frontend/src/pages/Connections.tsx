@@ -59,7 +59,9 @@ function Connections() {
         <Header />
         <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
           <Typography variant="h4" fontWeight="bold" mb={4}>
+            <h1 className="text-3xl font-bold text-foreground">
             Remote Connections
+            </h1> 
           </Typography>
           <Paper sx={{ p: 3, maxWidth: "md", margin: "auto" }}>
             <Typography variant="h6" mb={2}>

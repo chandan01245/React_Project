@@ -21,7 +21,6 @@ load_dotenv()
 
 # --- Flask App Setup ---
 app = Flask(__name__)
-db = SQLAlchemy(app)
 
 # Use environment-provided secrets; fall back to unsafe defaults for local dev only
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'change-me-in-prod')
@@ -43,6 +42,8 @@ SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'change-me-jwt-in-prod')
 # PostgreSQL database config (adjust this!)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URI")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize SQLAlchemy AFTER config is set
 db = SQLAlchemy(app)
 
 
@@ -134,18 +135,29 @@ NEW: API ROUTE FOR REMOTE FILE LISTING VIA SSH
 
 @app.route('/api/list-ldap-server-files', methods=['GET'])
 def list_ldap_server_files():
-    # Configuration for the remote server
-    # !!! IMPORTANT: Replace with your actual LDAP Server IP and username !!!
-    LDAP_SERVER_IP = "IPHERE"
-    LDAP_SERVER_USER = "user_on_ldap_server"
+    """
+    List files on a remote server using password-based SSH.
+    Configure credentials via env vars:
+      SSH_HOST, SSH_USER, SSH_PASSWORD (or SSH_PASS), SSH_COMMAND (optional)
+    """
+    LDAP_SERVER_IP = os.getenv("SSH_HOST", "")
+    LDAP_SERVER_USER = os.getenv("SSH_USER", "")
+    LDAP_SERVER_PASSWORD = os.getenv("SSH_PASSWORD", os.getenv("SSH_PASS", ""))
+    command_to_run = os.getenv("SSH_COMMAND", "ls -la /home")
 
-    # Command to execute on the remote server
-    command_to_run = "ls -la /home"  # Example: list contents of /home
+    if not LDAP_SERVER_IP or not LDAP_SERVER_USER or not LDAP_SERVER_PASSWORD:
+        return jsonify({
+            'status': 'error',
+            'message': 'Missing SSH env vars. Require SSH_HOST, SSH_USER, SSH_PASSWORD.'
+        }), 400
 
     try:
         ssh_command = [
+            "sshpass", "-p", LDAP_SERVER_PASSWORD,
             "ssh",
-            "-o", "StrictHostKeyChecking=no",  # Bypasses host key verification
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "PreferredAuthentications=password",
             f"{LDAP_SERVER_USER}@{LDAP_SERVER_IP}",
             command_to_run
         ]
@@ -154,12 +166,13 @@ def list_ldap_server_files():
             ssh_command,
             capture_output=True,
             text=True,
-            check=True,  # Raise an error if SSH fails
-            timeout=15
+            check=True,
+            timeout=20
         )
         return jsonify({'status': 'success', 'files': result.stdout.splitlines()})
     except subprocess.CalledProcessError as e:
-        return jsonify({'status': 'error', 'message': f"Command failed on remote server: {e.stderr}"}), 500
+        stderr = (e.stderr or '').strip()
+        return jsonify({'status': 'error', 'message': f"Command failed on remote server: {stderr}"}), 500
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
