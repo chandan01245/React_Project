@@ -76,6 +76,7 @@ class Dashboard(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     panels = db.Column(db.Text, nullable=False)  # JSON string of panel configurations
     pinned_panels = db.Column(db.Text, nullable=True)  # JSON string of pinned panel configurations
+    dashboard_layouts = db.Column(db.Text, nullable=True)  # JSON string of dashboard layouts
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
     
@@ -93,6 +94,34 @@ def generate_token(user):
 with app.app_context():
     try:
         db.create_all()
+        
+        # Check if we need to add the dashboard_layouts column
+        from sqlalchemy import text
+        try:
+            # Check if the column exists using a raw SQL query
+            result = db.session.execute(text("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'dashboard' AND column_name = 'dashboard_layouts'
+            """))
+            
+            if result.fetchone() is None:
+                # Column doesn't exist, add it
+                db.session.execute(text("ALTER TABLE dashboard ADD COLUMN dashboard_layouts TEXT"))
+                db.session.commit()
+                print("[startup] Added dashboard_layouts column to dashboard table")
+            else:
+                print("[startup] dashboard_layouts column already exists")
+        except Exception as e:
+            # Handle case where information_schema query fails (different database type)
+            print("[startup] Error checking for dashboard_layouts column:", str(e))
+            try:
+                # Try to add the column anyway, might fail if it exists
+                db.session.execute(text("ALTER TABLE dashboard ADD COLUMN dashboard_layouts TEXT"))
+                db.session.commit()
+                print("[startup] Added dashboard_layouts column to dashboard table")
+            except Exception as e2:
+                print("[startup] dashboard_layouts column might already exist:", str(e2))
     except Exception:
         # Avoid crashing on import logs; container orchestration will retry
         pass
@@ -397,12 +426,13 @@ def get_dashboard():
             return jsonify({
                 'panels': json.loads(dashboard.panels),
                 'pinned_panels': json.loads(dashboard.pinned_panels) if dashboard.pinned_panels else [],
+                'dashboard_layouts': json.loads(dashboard.dashboard_layouts) if dashboard.dashboard_layouts else {},
                 'created_at': dashboard.created_at.isoformat(),
                 'updated_at': dashboard.updated_at.isoformat()
             }), 200
         else:
             # Return empty dashboard if none exists
-            return jsonify({'panels': [], 'pinned_panels': []}), 200
+            return jsonify({'panels': [], 'pinned_panels': [], 'dashboard_layouts': {}}), 200
             
     except jwt.ExpiredSignatureError:
         return jsonify({'error': 'Token has expired!'}), 401
@@ -432,6 +462,7 @@ def save_dashboard():
         
         panels = data['panels']
         pinned_panels = data.get('pinned_panels', []) # Get pinned panels from request
+        dashboard_layouts = data.get('dashboard_layouts', {}) # Get dashboard layouts from request
         
         # Check if dashboard exists for this user
         dashboard = Dashboard.query.filter_by(user_id=user_id).first()
@@ -440,13 +471,15 @@ def save_dashboard():
             # Update existing dashboard
             dashboard.panels = json.dumps(panels)
             dashboard.pinned_panels = json.dumps(pinned_panels) # Update pinned panels
+            dashboard.dashboard_layouts = json.dumps(dashboard_layouts) # Update dashboard layouts
             dashboard.updated_at = datetime.datetime.now(datetime.UTC)
         else:
             # Create new dashboard
             dashboard = Dashboard(
                 user_id=user_id,
                 panels=json.dumps(panels),
-                pinned_panels=json.dumps(pinned_panels) # Initialize pinned panels
+                pinned_panels=json.dumps(pinned_panels), # Initialize pinned panels
+                dashboard_layouts=json.dumps(dashboard_layouts) # Initialize dashboard layouts
             )
             db.session.add(dashboard)
         
@@ -455,7 +488,8 @@ def save_dashboard():
         return jsonify({
             'message': 'Dashboard saved successfully',
             'panels': panels,
-            'pinned_panels': pinned_panels
+            'pinned_panels': pinned_panels,
+            'dashboard_layouts': dashboard_layouts
         }), 200
         
     except jwt.ExpiredSignatureError:
@@ -534,6 +568,7 @@ def seed_database():
     """Create tables and seed default users exactly once."""
     with app.app_context():
         db.create_all()
+        
         if User.query.first():
             print("[seed] Users already exist; skipping.")
             return
