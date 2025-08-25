@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: kero
+      POSTGRES_DB: Dummy_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ILIkari7
+      POSTGRES_PASSWORD: DBUSER
     ports:
       - "5432:5432"
     volumes:
@@ -14,16 +14,16 @@ services:
     build:
       context: .
       dockerfile: Backend/Dockerfile
-    environment:
-      FLASK_ENV: development
-      DATABASE_URI: postgresql://postgres:ILIkari7@db:5432/kero
-      FLASK_SECRET_KEY: change-me-in-dev
-      JWT_SECRET_KEY: change-me-in-dev
     depends_on:
       - db
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     restart: unless-stopped
+    user: "0:0"
+    volumes:
+      - /root/.ssh:/root/.ssh:ro
 
   frontend:
     build:
