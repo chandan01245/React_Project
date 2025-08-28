@@ -1,0 +1,4 @@
+dn: cn=clusteradmin,ou=groups,dc=example,dc=com
+changetype: modify
+add: gidNumber
+gidNumber: 10001

@@ -1,0 +1,11 @@
+dn: uid=user1,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+uid: user1
+sn: Chandan
+cn: Chandan C
+uidNumber: 1001
+gidNumber: 10001  # gidNumber of clusteradmin
+homeDirectory: /home/user1
+loginShell: /bin/bash
+userPassword: chandan01245
