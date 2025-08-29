@@ -85,6 +85,30 @@ class Dashboard(db.Model):
     # Relationship
     user = db.relationship('User', backref=db.backref('dashboards', lazy=True))
 
+# --- Server Model (for infrastructure endpoints) ---
+class ServerHost(db.Model):
+    __tablename__ = 'server'
+    id = db.Column(db.Integer, primary_key=True)
+    hostname = db.Column(db.String(255), unique=True, nullable=False)
+    bmc_ip = db.Column(db.String(255), nullable=True)
+    auth_method = db.Column(db.String(32), nullable=False)  # 'ssh-key' | 'root-password'
+    ssh_key = db.Column(db.Text, nullable=True)             # plain storage (consider encrypting)
+    root_password_hash = db.Column(db.Text, nullable=True)  # hashed root password
+    state = db.Column(db.String(32), nullable=False, default='Unconfigured')  # Up | Down | Unconfigured
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'hostname': self.hostname,
+            'bmc_ip': self.bmc_ip,
+            'auth_method': self.auth_method,
+            'state': self.state,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 def generate_token(user):
     payload = {
         'user_id': user.id,
@@ -295,6 +319,83 @@ def ldap_list_users():
         if debug:
             payload['detail'] = str(e)
         return jsonify(payload), 500
+
+# -------------------- Server CRUD & State Routes --------------------
+def _ping_host(host: str, count: int = 1, timeout: int = 2) -> bool:
+    """Simple ICMP reachability check. If ping not permitted, returns False."""
+    try:
+        result = subprocess.run(
+            ["ping", "-c", str(count), "-W", str(timeout), host],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+@app.route('/api/servers', methods=['GET'])
+def list_servers():
+    records = ServerHost.query.order_by(ServerHost.created_at.desc()).all()
+    return jsonify({'servers': [r.to_dict() for r in records]}), 200
+
+@app.route('/api/servers', methods=['POST'])
+def create_server():
+    data = request.get_json() or {}
+    hostname = (data.get('hostname') or '').strip()
+    bmc_ip = (data.get('bmc_ip') or '').strip() or None
+    auth_method = data.get('auth_method')
+    ssh_key = data.get('ssh_key')
+    root_password = data.get('root_password')
+
+    if not hostname or not auth_method:
+        return jsonify({'error': 'hostname and auth_method are required'}), 400
+    if auth_method not in ('ssh-key', 'root-password'):
+        return jsonify({'error': 'Invalid auth_method'}), 400
+    if ServerHost.query.filter_by(hostname=hostname).first():
+        return jsonify({'error': 'Server already exists'}), 409
+
+    host_obj = ServerHost(
+        hostname=hostname,
+        bmc_ip=bmc_ip,
+        auth_method=auth_method,
+    )
+    if auth_method == 'ssh-key':
+        host_obj.ssh_key = ssh_key.strip() if ssh_key else None
+    else:
+        if not root_password:
+            return jsonify({'error': 'root_password required for root-password auth'}), 400
+        host_obj.root_password_hash = generate_password_hash(root_password)
+
+    # Initial reachability state
+    reachable = _ping_host(hostname)
+    host_obj.state = 'Up' if reachable else 'Down'
+
+    db.session.add(host_obj)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    return jsonify({'message': 'Server created', 'server': host_obj.to_dict()}), 201
+
+@app.route('/api/servers/<int:server_id>', methods=['DELETE'])
+def delete_server(server_id: int):
+    host_obj = ServerHost.query.get(server_id)
+    if not host_obj:
+        return jsonify({'error': 'Server not found'}), 404
+    db.session.delete(host_obj)
+    db.session.commit()
+    return jsonify({'message': 'Server deleted'}), 200
+
+@app.route('/api/servers/<int:server_id>/refresh', methods=['POST'])
+def refresh_server(server_id: int):
+    host_obj = ServerHost.query.get(server_id)
+    if not host_obj:
+        return jsonify({'error': 'Server not found'}), 404
+    host_obj.state = 'Up' if _ping_host(host_obj.hostname) else 'Down'
+    db.session.commit()
+    return jsonify({'message': 'State refreshed', 'server': host_obj.to_dict()}), 200
 
 
 @app.route('/protected')

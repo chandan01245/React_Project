@@ -1,15 +1,15 @@
 import React from "react";
 import { AiOutlineNodeIndex } from "react-icons/ai";
 import {
-  FiDatabase,
-  FiFolder,
-  FiGlobe,
-  FiHardDrive,
-  FiHome,
-  FiLink,
-  FiLogOut,
-  FiMonitor,
-  FiSettings,
+    FiDatabase,
+    FiFolder,
+    FiGlobe,
+    FiHardDrive,
+    FiHome,
+    FiLink,
+    FiLogOut,
+    FiMonitor,
+    FiSettings,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -22,6 +22,7 @@ interface NavItem {
 const Sidebar: React.FC = () => {
   const navItems: NavItem[] = [
     { name: "Dashboard", path: "/dashboard", icon: <FiHome /> },
+  { name: "Server", path: "/server", icon: <FiMonitor /> },
     { name: "Metrics", path: "/metrics", icon: <FiMonitor /> },
     { name: "Node", path: "/node", icon: <AiOutlineNodeIndex /> },
     { name: "Disk", path: "/disk", icon: <FiHardDrive /> },
