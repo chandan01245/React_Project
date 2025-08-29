@@ -14,6 +14,7 @@ import Metrics from "./pages/Metrics";
 import Network from "./pages/Network";
 import Node from "./pages/Node";
 import NotFound from "./pages/NotFound";
+import Server from "./pages/Server";
 import Settings from "./pages/Settings";
 import Storage from "./pages/Storage";
 
@@ -93,6 +94,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Connections />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/server"
+          element={
+            <ProtectedRoute>
+              <Server />
             </ProtectedRoute>
           }
         />

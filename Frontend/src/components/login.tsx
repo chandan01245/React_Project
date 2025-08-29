@@ -99,24 +99,25 @@ function Login() {
     >
       <form
         onSubmit={handleLogin}
-        className="relative z-10 w-full max-w-md bg-white bg-opacity-90 rounded-lg shadow-lg p-10 flex flex-col items-center"
+        className="relative z-10 w-full max-w-md rounded-lg shadow-lg p-10 flex flex-col items-center"
+        style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
       >
         <div className="flex items-center gap-4 mb-8 w-full justify-center">
           <img src={logo} alt="logo" className="w-20" />
           <span
-            className="text-2xl font-bold text-[#2b3a4a] tracking-wide"
-            style={{ letterSpacing: "1px" }}
+            className="text-2xl font-bold tracking-wide"
+            style={{ letterSpacing: "1px", color: 'var(--foreground)', fontFamily: 'Inter, Roboto, sans-serif' }}
           >
-            Acceleron <span className="text-[#6fa3c7] font-semibold">HCI</span>
+            Acceleron <span className="font-semibold" style={{ color: 'var(--primary)' }}>HCI</span>
           </span>
         </div>
         {error && (
-          <div className="w-full p-2 mb-2 bg-red-100 text-red-600 text-sm rounded text-center">
+      <div className="w-full p-2 mb-2 text-sm rounded text-center" style={{ backgroundColor: 'color-mix(in oklab, var(--destructive) 12%, white)', color: 'var(--destructive)' }}>
             {error}
           </div>
         )}
         <div className="w-full flex flex-col gap-4 mb-6">
-          <div className="w-full flex items-center bg-gray-100 text-gray-700 p-2 rounded-xl">
+      <div className="w-full flex items-center p-2 rounded-xl" style={{ backgroundColor: 'var(--secondary)', color: 'var(--secondary-foreground)' }}>
             <MdAlternateEmail className="text-gray-400" />
             <input
               type="string"
@@ -125,11 +126,11 @@ function Login() {
                 setEmail(e.target.value)
               }
               placeholder="Email or Username"
-              className="bg-transparent border-0 w-full outline-none text-sm md:text-base px-2"
+        className="bg-transparent border-0 w-full outline-none text-sm md:text-base px-2"
               disabled={isLoading}
             />
           </div>
-          <div className="w-full relative flex items-center bg-gray-100 text-gray-700 p-2 rounded-xl">
+      <div className="w-full relative flex items-center p-2 rounded-xl" style={{ backgroundColor: 'var(--secondary)', color: 'var(--secondary-foreground)' }}>
             <FaFingerprint className="text-gray-400" />
             <input
               type={showPassword ? "text" : "password"}
@@ -143,12 +144,12 @@ function Login() {
             />
             {showPassword ? (
               <FaEyeSlash
-                className="absolute right-5 cursor-pointer text-gray-400 hover:text-gray-600"
+        className="absolute right-5 cursor-pointer"
                 onClick={togglePasswordVisibility}
               />
             ) : (
               <FaEye
-                className="absolute right-5 cursor-pointer text-gray-400 hover:text-gray-600"
+        className="absolute right-5 cursor-pointer"
                 onClick={togglePasswordVisibility}
               />
             )}
@@ -157,7 +158,8 @@ function Login() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2 bg-[#6fa3c7] text-white rounded hover:bg-[#5b8bb2] transition-colors font-semibold text-lg disabled:opacity-60"
+      className="w-full py-2 rounded transition-colors font-semibold text-lg disabled:opacity-60"
+      style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
         >
           {isLoading ? "Signing In..." : "Sign In"}
         </button>

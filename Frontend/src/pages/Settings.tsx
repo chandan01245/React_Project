@@ -218,17 +218,17 @@ function Settings() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-white dark:bg-black text-black dark:text-white transition-colors duration-300 overflow-hidden">
+    <div className="flex h-screen w-screen bg-background text-foreground transition-theme overflow-hidden">
       <Sidebar />
       <div className="flex-1 overflow-auto">
         {/* Only pass the pageTitle or nothing at all */}
         <Header />
         <h1 className="text-2xl font-bold mb-6">Settings</h1>
         {/* 2FA Settings */}
-        <div className="bg-gray-100 rounded-lg overflow-hidden mb-6">
+        <div className="bg-card rounded-lg overflow-hidden mb-6 transition-theme">
           <button
             onClick={() => setIs2FAOpen(!is2FAOpen)}
-            className="w-full p-4 flex justify-between items-center hover:bg-gray-200 transition-colors"
+            className="w-full p-4 flex justify-between items-center hover:bg-muted transition-theme"
           >
             <h2 className="text-xl font-semibold">Two-Factor Authentication</h2>
             <svg
@@ -248,7 +248,7 @@ function Settings() {
             </svg>
           </button>
           {is2FAOpen && (
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4 border-t border-border transition-theme">
               <FormControl component="fieldset">
                 <FormGroup>
                   <FormControlLabel
@@ -270,13 +270,13 @@ function Settings() {
 
         {/* USERS Section (only for admin group) */}
         {userGroup === "admin" && (
-          <div className="bg-gray-100 rounded-lg overflow-hidden mb-6">
+          <div className="bg-card rounded-lg overflow-hidden mb-6 transition-theme">
             <button
               onClick={() => {
                 if (!isUsersOpen) fetchUsers();
                 setIsUsersOpen((prev) => !prev);
               }}
-              className="w-full p-4 flex justify-between items-center hover:bg-gray-200 transition-colors"
+              className="w-full p-4 flex justify-between items-center hover:bg-muted transition-theme"
             >
               <h2 className="text-xl font-semibold">Users</h2>
               <svg
@@ -296,7 +296,7 @@ function Settings() {
               </svg>
             </button>
             {isUsersOpen && (
-              <div className="p-4 border-t border-gray-200">
+              <div className="p-4 border-t border-border transition-theme">
                 <TableContainer
                   component={Paper}
                   sx={{ borderRadius: 2, boxShadow: 1 }}
@@ -333,8 +333,6 @@ function Settings() {
                                 boxShadow: "none",
                                 minWidth: 0,
                                 px: 2,
-                                background: "#d32f2f",
-                                "&:hover": { background: "#b71c1c" },
                               }}
                             >
                               Delete
@@ -351,12 +349,10 @@ function Settings() {
                   onClick={() => setAddDialogOpen(true)}
                   sx={{
                     mt: 2,
-                    background: "#1976d2",
                     borderRadius: 2,
                     textTransform: "none",
                     fontWeight: 600,
                     boxShadow: "none",
-                    "&:hover": { background: "#125ea2" },
                   }}
                 >
                   Add User
@@ -491,7 +487,7 @@ function Settings() {
           </DialogTitle>
           <DialogContent>
             <div className="flex flex-col items-center p-4">
-              <p className="mb-4 text-center text-gray-600">
+              <p className="mb-4 text-center text-muted-foreground transition-theme">
                 Scan this QR code with your authenticator app:
               </p>
               {qrCode && (
@@ -545,13 +541,12 @@ function Settings() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              backgroundColor: "#f9f9f9",
               padding: 3,
             }}
           >
             <Typography
               variant="body1"
-              className="mb-4 text-center text-gray-600"
+              className="mb-4 text-center text-muted-foreground"
             >
               Enter the 6-digit code from your authenticator app:
             </Typography>
@@ -568,7 +563,6 @@ function Settings() {
               helperText={verificationError}
               inputProps={{ maxLength: 6 }}
               sx={{
-                backgroundColor: "white",
                 borderRadius: 2,
                 boxShadow: 1,
               }}

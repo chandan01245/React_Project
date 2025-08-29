@@ -5,6 +5,8 @@ import json
 import os
 import shlex
 import subprocess
+from ldap3 import Server, Connection, ALL, SUBTREE, Tls
+from ldap3.core.exceptions import LDAPBindError
 
 import jwt
 import pyotp
@@ -76,11 +78,36 @@ class Dashboard(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     panels = db.Column(db.Text, nullable=False)  # JSON string of panel configurations
     pinned_panels = db.Column(db.Text, nullable=True)  # JSON string of pinned panel configurations
+    dashboard_layouts = db.Column(db.Text, nullable=True)  # JSON string of dashboard layouts
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
     
     # Relationship
     user = db.relationship('User', backref=db.backref('dashboards', lazy=True))
+
+# --- Server Model (for infrastructure endpoints) ---
+class ServerHost(db.Model):
+    __tablename__ = 'server'
+    id = db.Column(db.Integer, primary_key=True)
+    hostname = db.Column(db.String(255), unique=True, nullable=False)
+    bmc_ip = db.Column(db.String(255), nullable=True)
+    auth_method = db.Column(db.String(32), nullable=False)  # 'ssh-key' | 'root-password'
+    ssh_key = db.Column(db.Text, nullable=True)             # plain storage (consider encrypting)
+    root_password_hash = db.Column(db.Text, nullable=True)  # hashed root password
+    state = db.Column(db.String(32), nullable=False, default='Unconfigured')  # Up | Down | Unconfigured
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'hostname': self.hostname,
+            'bmc_ip': self.bmc_ip,
+            'auth_method': self.auth_method,
+            'state': self.state,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 def generate_token(user):
     payload = {
@@ -93,6 +120,34 @@ def generate_token(user):
 with app.app_context():
     try:
         db.create_all()
+        
+        # Check if we need to add the dashboard_layouts column
+        from sqlalchemy import text
+        try:
+            # Check if the column exists using a raw SQL query
+            result = db.session.execute(text("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'dashboard' AND column_name = 'dashboard_layouts'
+            """))
+            
+            if result.fetchone() is None:
+                # Column doesn't exist, add it
+                db.session.execute(text("ALTER TABLE dashboard ADD COLUMN dashboard_layouts TEXT"))
+                db.session.commit()
+                print("[startup] Added dashboard_layouts column to dashboard table")
+            else:
+                print("[startup] dashboard_layouts column already exists")
+        except Exception as e:
+            # Handle case where information_schema query fails (different database type)
+            print("[startup] Error checking for dashboard_layouts column:", str(e))
+            try:
+                # Try to add the column anyway, might fail if it exists
+                db.session.execute(text("ALTER TABLE dashboard ADD COLUMN dashboard_layouts TEXT"))
+                db.session.commit()
+                print("[startup] Added dashboard_layouts column to dashboard table")
+            except Exception as e2:
+                print("[startup] dashboard_layouts column might already exist:", str(e2))
     except Exception:
         # Avoid crashing on import logs; container orchestration will retry
         pass
@@ -140,10 +195,15 @@ def list_ldap_server_files():
     Configure credentials via env vars:
       SSH_HOST, SSH_USER, SSH_PASSWORD (or SSH_PASS), SSH_COMMAND (optional)
     """
-    LDAP_SERVER_IP = os.getenv("SSH_HOST", "")
-    LDAP_SERVER_USER = os.getenv("SSH_USER", "")
-    LDAP_SERVER_PASSWORD = os.getenv("SSH_PASSWORD", os.getenv("SSH_PASS", ""))
-    command_to_run = os.getenv("SSH_COMMAND", "ls -la /home")
+    LDAP_SERVER_IP = request.args.get('host') or os.getenv("SSH_HOST", "")
+    LDAP_SERVER_USER = request.args.get('user') or os.getenv("SSH_USER", "")
+    LDAP_SERVER_PASSWORD = request.args.get('password') or os.getenv("SSH_PASSWORD", os.getenv("SSH_PASS", ""))
+    command_to_run = request.args.get('cmd') or os.getenv("SSH_COMMAND", "ls -la /home")
+    # Allow overriding execution timeout (seconds)
+    try:
+        exec_timeout = float(request.args.get('timeout') or os.getenv('SSH_TIMEOUT', '25'))
+    except ValueError:
+        exec_timeout = 25.0
 
     if not LDAP_SERVER_IP or not LDAP_SERVER_USER or not LDAP_SERVER_PASSWORD:
         return jsonify({
@@ -158,8 +218,12 @@ def list_ldap_server_files():
             "-o", "StrictHostKeyChecking=no",
             "-o", "UserKnownHostsFile=/dev/null",
             "-o", "PreferredAuthentications=password",
+            "-o", "PubkeyAuthentication=no",
+            "-o", "NumberOfPasswordPrompts=1",
+            "-o", "ConnectTimeout=8",
             f"{LDAP_SERVER_USER}@{LDAP_SERVER_IP}",
-            command_to_run
+            # Run via bash -lc so compound commands (cd && ls) work reliably
+            f"bash -lc {shlex.quote(command_to_run)}"
         ]
 
         result = subprocess.run(
@@ -167,14 +231,171 @@ def list_ldap_server_files():
             capture_output=True,
             text=True,
             check=True,
-            timeout=20
+            timeout=exec_timeout
         )
         return jsonify({'status': 'success', 'files': result.stdout.splitlines()})
+    except subprocess.TimeoutExpired:
+        return jsonify({'status': 'error', 'message': f'SSH command timed out after {exec_timeout} seconds'}), 504
     except subprocess.CalledProcessError as e:
         stderr = (e.stderr or '').strip()
         return jsonify({'status': 'error', 'message': f"Command failed on remote server: {stderr}"}), 500
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/ldap/users', methods=['GET'])
+def ldap_list_users():
+    """Query an LDAP server for user entries.
+    Query params:
+      base (required)      : Base DN, e.g. dc=example,dc=com
+      uri  (required)      : ldap://host[:port] or ldaps://host[:port]
+      bind_dn (optional)   : Explicit bind DN overrides env LDAP_BIND_DN
+      bind_password        : Overrides env LDAP_BIND_PASSWORD
+      filter (optional)    : LDAP filter (default matches person / inetOrgPerson)
+      attrs (optional)     : Comma-separated attributes (default cn,sn,uid,mail)
+      starttls=1           : Perform StartTLS after connecting (ldap:// only)
+      ssl=1                : Force use_ssl on server (equivalent to ldaps://)
+      debug=1              : Include debug info in error responses
+    Env fallbacks:
+      LDAP_BIND_DN, LDAP_BIND_PASSWORD
+    """
+    base_dn = request.args.get('base')
+    uri = request.args.get('uri')
+    flt = request.args.get('filter', '(|(objectClass=person)(objectClass=inetOrgPerson))')
+    attrs_param = request.args.get('attrs')
+    attr_list = [a.strip() for a in attrs_param.split(',')] if attrs_param else ['cn', 'sn', 'uid', 'mail']
+    debug = request.args.get('debug') == '1' or os.getenv('LDAP_DEBUG') == '1'
+
+    if not base_dn or not uri:
+        return jsonify({'status': 'error', 'message': 'Missing required params base, uri'}), 400
+
+    bind_dn = request.args.get('bind_dn') or os.getenv('LDAP_BIND_DN')
+    bind_pw = request.args.get('bind_password') or os.getenv('LDAP_BIND_PASSWORD')
+    want_starttls = request.args.get('starttls') == '1'
+    force_ssl = request.args.get('ssl') == '1'
+
+    # Determine SSL usage: ldaps:// URI OR ssl=1
+    use_ssl = uri.lower().startswith('ldaps://') or force_ssl
+
+    try:
+        server = Server(uri, get_info=ALL, use_ssl=use_ssl)
+        # Manual bind for better error handling
+        conn = Connection(server, user=bind_dn, password=bind_pw, auto_bind=False) if bind_dn and bind_pw else Connection(server, auto_bind=False)
+        if want_starttls and not use_ssl:
+            if not conn.start_tls():
+                return jsonify({'status': 'error', 'message': 'StartTLS failed', 'result': conn.result}), 502
+        if not conn.bind():
+            code = conn.result.get('description') if conn.result else 'bindFailed'
+            http_code = 401 if 'invalidCredentials' in code else 502
+            payload = {'status': 'error', 'message': f'Bind failed: {code}'}
+            if debug:
+                payload['detail'] = conn.result
+            return jsonify(payload), http_code
+        success = conn.search(search_base=base_dn, search_filter=flt, search_scope=SUBTREE, attributes=attr_list)
+        if not success:
+            return jsonify({'status': 'success', 'users': [], 'count': 0})
+        users = []
+        for entry in conn.entries:
+            data = {'dn': entry.entry_dn}
+            for attr in attr_list:
+                try:
+                    val = entry[attr].value
+                    if isinstance(val, (list, tuple)):
+                        data[attr] = list(val)
+                    else:
+                        data[attr] = val
+                except Exception:
+                    pass
+            users.append(data)
+        return jsonify({'status': 'success', 'count': len(users), 'users': users})
+    except LDAPBindError as e:
+        msg = 'Invalid credentials'
+        payload = {'status': 'error', 'message': msg}
+        if debug:
+            payload['detail'] = str(e)
+        return jsonify(payload), 401
+    except Exception as e:
+        payload = {'status': 'error', 'message': 'LDAP query failed'}
+        if debug:
+            payload['detail'] = str(e)
+        return jsonify(payload), 500
+
+# -------------------- Server CRUD & State Routes --------------------
+def _ping_host(host: str, count: int = 1, timeout: int = 2) -> bool:
+    """Simple ICMP reachability check. If ping not permitted, returns False."""
+    try:
+        result = subprocess.run(
+            ["ping", "-c", str(count), "-W", str(timeout), host],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+@app.route('/api/servers', methods=['GET'])
+def list_servers():
+    records = ServerHost.query.order_by(ServerHost.created_at.desc()).all()
+    return jsonify({'servers': [r.to_dict() for r in records]}), 200
+
+@app.route('/api/servers', methods=['POST'])
+def create_server():
+    data = request.get_json() or {}
+    hostname = (data.get('hostname') or '').strip()
+    bmc_ip = (data.get('bmc_ip') or '').strip() or None
+    auth_method = data.get('auth_method')
+    ssh_key = data.get('ssh_key')
+    root_password = data.get('root_password')
+
+    if not hostname or not auth_method:
+        return jsonify({'error': 'hostname and auth_method are required'}), 400
+    if auth_method not in ('ssh-key', 'root-password'):
+        return jsonify({'error': 'Invalid auth_method'}), 400
+    if ServerHost.query.filter_by(hostname=hostname).first():
+        return jsonify({'error': 'Server already exists'}), 409
+
+    host_obj = ServerHost(
+        hostname=hostname,
+        bmc_ip=bmc_ip,
+        auth_method=auth_method,
+    )
+    if auth_method == 'ssh-key':
+        host_obj.ssh_key = ssh_key.strip() if ssh_key else None
+    else:
+        if not root_password:
+            return jsonify({'error': 'root_password required for root-password auth'}), 400
+        host_obj.root_password_hash = generate_password_hash(root_password)
+
+    # Initial reachability state
+    reachable = _ping_host(hostname)
+    host_obj.state = 'Up' if reachable else 'Down'
+
+    db.session.add(host_obj)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    return jsonify({'message': 'Server created', 'server': host_obj.to_dict()}), 201
+
+@app.route('/api/servers/<int:server_id>', methods=['DELETE'])
+def delete_server(server_id: int):
+    host_obj = ServerHost.query.get(server_id)
+    if not host_obj:
+        return jsonify({'error': 'Server not found'}), 404
+    db.session.delete(host_obj)
+    db.session.commit()
+    return jsonify({'message': 'Server deleted'}), 200
+
+@app.route('/api/servers/<int:server_id>/refresh', methods=['POST'])
+def refresh_server(server_id: int):
+    host_obj = ServerHost.query.get(server_id)
+    if not host_obj:
+        return jsonify({'error': 'Server not found'}), 404
+    host_obj.state = 'Up' if _ping_host(host_obj.hostname) else 'Down'
+    db.session.commit()
+    return jsonify({'message': 'State refreshed', 'server': host_obj.to_dict()}), 200
 
 
 @app.route('/protected')
@@ -397,12 +618,13 @@ def get_dashboard():
             return jsonify({
                 'panels': json.loads(dashboard.panels),
                 'pinned_panels': json.loads(dashboard.pinned_panels) if dashboard.pinned_panels else [],
+                'dashboard_layouts': json.loads(dashboard.dashboard_layouts) if dashboard.dashboard_layouts else {},
                 'created_at': dashboard.created_at.isoformat(),
                 'updated_at': dashboard.updated_at.isoformat()
             }), 200
         else:
             # Return empty dashboard if none exists
-            return jsonify({'panels': [], 'pinned_panels': []}), 200
+            return jsonify({'panels': [], 'pinned_panels': [], 'dashboard_layouts': {}}), 200
             
     except jwt.ExpiredSignatureError:
         return jsonify({'error': 'Token has expired!'}), 401
@@ -432,6 +654,7 @@ def save_dashboard():
         
         panels = data['panels']
         pinned_panels = data.get('pinned_panels', []) # Get pinned panels from request
+        dashboard_layouts = data.get('dashboard_layouts', {}) # Get dashboard layouts from request
         
         # Check if dashboard exists for this user
         dashboard = Dashboard.query.filter_by(user_id=user_id).first()
@@ -440,13 +663,15 @@ def save_dashboard():
             # Update existing dashboard
             dashboard.panels = json.dumps(panels)
             dashboard.pinned_panels = json.dumps(pinned_panels) # Update pinned panels
+            dashboard.dashboard_layouts = json.dumps(dashboard_layouts) # Update dashboard layouts
             dashboard.updated_at = datetime.datetime.now(datetime.UTC)
         else:
             # Create new dashboard
             dashboard = Dashboard(
                 user_id=user_id,
                 panels=json.dumps(panels),
-                pinned_panels=json.dumps(pinned_panels) # Initialize pinned panels
+                pinned_panels=json.dumps(pinned_panels), # Initialize pinned panels
+                dashboard_layouts=json.dumps(dashboard_layouts) # Initialize dashboard layouts
             )
             db.session.add(dashboard)
         
@@ -455,7 +680,8 @@ def save_dashboard():
         return jsonify({
             'message': 'Dashboard saved successfully',
             'panels': panels,
-            'pinned_panels': pinned_panels
+            'pinned_panels': pinned_panels,
+            'dashboard_layouts': dashboard_layouts
         }), 200
         
     except jwt.ExpiredSignatureError:
@@ -534,6 +760,7 @@ def seed_database():
     """Create tables and seed default users exactly once."""
     with app.app_context():
         db.create_all()
+        
         if User.query.first():
             print("[seed] Users already exist; skipping.")
             return
